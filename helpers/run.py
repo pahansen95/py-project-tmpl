@@ -1,7 +1,7 @@
 """Helper command dispatcher."""
 
 import argparse
-import shlex
+import sys
 
 from .utils import run_command
 
@@ -18,7 +18,7 @@ def main() -> None:
     parser.add_argument("command", choices=COMMANDS.keys())
     args, unknown = parser.parse_known_args()
 
-    cmd = shlex.split(f"python {COMMANDS[args.command]}") + unknown
+    cmd = [sys.executable, COMMANDS[args.command], *unknown]
     run_command(cmd)
 
 

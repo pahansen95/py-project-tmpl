@@ -1,0 +1,20 @@
+[project]
+name = "my-tool"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+builder = [
+  "ruff>=0.5",
+  "mkdocs-material",
+]
+tester = [
+  "pytest>=8.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+  "pytest>=8.0",
+  "ruff>=0.5",
+  "mkdocs-material",
+]

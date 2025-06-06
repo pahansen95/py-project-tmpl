@@ -12,24 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from .state import BootstrapState
+from ..utils import configure_logging, run_command
 
 logger = logging.getLogger(__name__)
-
-
-def setup_logging(verbose: bool = False) -> None:
-  """Configure logging to stderr."""
-  level = logging.DEBUG if verbose else logging.INFO
-  logging.basicConfig(
-    level=level,
-    format="[L4] %(levelname)s: %(message)s",
-    stream=sys.stderr,
-  )
-
-
-def run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
-  """Execute command and return result."""
-  logger.debug("Running: %s", " ".join(cmd))
-  return subprocess.run(cmd, capture_output=True, text=True, check=check)
 
 
 def install_pre_commit_hooks(project_root: Path) -> dict[str, Any]:
@@ -115,7 +100,7 @@ def main() -> None:
   parser.add_argument("--skip-ide", action="store_true", help="Skip IDE configuration")
   args = parser.parse_args()
 
-  setup_logging(args.verbose)
+  configure_logging(args.verbose)
 
   # Read input state from stdin
   if not sys.stdin.isatty():

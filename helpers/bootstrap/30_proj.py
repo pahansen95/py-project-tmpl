@@ -15,24 +15,9 @@ from typing import Any
 from .state import BootstrapState
 from .verify import verify_venv
 from ..tools import python as pytools
+from ..utils import configure_logging, run_command
 
 logger = logging.getLogger(__name__)
-
-
-def setup_logging(verbose: bool = False) -> None:
-  """Configure logging to stderr."""
-  level = logging.DEBUG if verbose else logging.INFO
-  logging.basicConfig(
-    level=level,
-    format="[L3] %(levelname)s: %(message)s",
-    stream=sys.stderr,
-  )
-
-
-def run_command(cmd: list[str], check: bool = True, **kwargs) -> subprocess.CompletedProcess:
-  """Execute command and return result."""
-  logger.debug("Running: %s", " ".join(cmd))
-  return subprocess.run(cmd, capture_output=True, text=True, check=check, **kwargs)
 
 
 def create_virtual_environment(project_root: Path, python_version: str | None = None) -> dict[str, Any]:
@@ -158,7 +143,7 @@ def main() -> None:
   parser.add_argument("--skip-tools", action="store_true", help="Skip dev tool installation")
   args = parser.parse_args()
 
-  setup_logging(args.verbose)
+  configure_logging(args.verbose)
 
   if not sys.stdin.isatty():
     try:

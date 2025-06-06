@@ -6,37 +6,15 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 from .state import BootstrapState
 from .platform import get_platform_handler
+from ..utils import configure_logging, run_command, check_command_exists
 
 logger = logging.getLogger(__name__)
-
-
-def setup_logging(verbose: bool = False) -> None:
-  """Configure logging to stderr."""
-  level = logging.DEBUG if verbose else logging.INFO
-  logging.basicConfig(
-    level=level,
-    format="[L2] %(levelname)s: %(message)s",
-    stream=sys.stderr,
-  )
-
-
-def run_command(cmd: list[str], check: bool = True, **kwargs) -> subprocess.CompletedProcess:
-  """Execute command and return result."""
-  logger.debug("Running: %s", " ".join(cmd))
-  return subprocess.run(cmd, capture_output=True, text=True, check=check, **kwargs)
-
-
-def check_command_exists(cmd: str) -> bool:
-  """Check if a command exists in PATH."""
-  result = run_command(["which", cmd], check=False)
-  return result.returncode == 0
 
 
 def install_uv(platform_handler) -> dict[str, Any]:
@@ -115,7 +93,7 @@ def main() -> None:
   parser.add_argument("--python", help="Override Python version to install")
   args = parser.parse_args()
 
-  setup_logging(args.verbose)
+  configure_logging(args.verbose)
 
   # Read input state from stdin
   if not sys.stdin.isatty():

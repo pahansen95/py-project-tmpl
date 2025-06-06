@@ -16,18 +16,9 @@ from pathlib import Path
 from typing import Any
 
 from .state import BootstrapState
+from ..utils import configure_logging
 
 logger = logging.getLogger(__name__)
-
-
-def setup_logging(verbose: bool = False) -> None:
-  """Configure logging to stderr."""
-  level = logging.DEBUG if verbose else logging.INFO
-  logging.basicConfig(
-    level=level,
-    format="[L0] %(levelname)s: %(message)s",
-    stream=sys.stderr,
-  )
 
 
 def probe_os_info() -> dict[str, Any]:
@@ -231,7 +222,7 @@ def main() -> None:
   parser.add_argument("--skip-network", action="store_true", help="Skip network connectivity tests")
   args = parser.parse_args()
 
-  setup_logging(args.verbose)
+  configure_logging(args.verbose)
   logger.info("Starting foundation layer probe")
 
   # Read input state from stdin (if any)

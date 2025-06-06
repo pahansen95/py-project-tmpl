@@ -9,20 +9,9 @@ from pathlib import Path
 from typing import Any, Dict
 
 from .verify import verify_tool
+from ..utils import run_command, check_command_exists
 
 logger = logging.getLogger(__name__)
-
-
-def run_command(cmd: list[str], check: bool = True, **kwargs) -> subprocess.CompletedProcess:
-  """Run command and return CompletedProcess."""
-  logger.debug("Running: %s", " ".join(cmd))
-  return subprocess.run(cmd, capture_output=True, text=True, check=check, **kwargs)
-
-
-def check_command_exists(cmd: str) -> bool:
-  """Return True if *cmd* exists in PATH."""
-  result = run_command(["which", cmd], check=False)
-  return result.returncode == 0
 
 
 class Platform:

@@ -2,17 +2,12 @@ from __future__ import annotations
 
 import logging
 import re
-import subprocess
 from pathlib import Path
 from typing import Any
 
+from ..utils import run_command
+
 logger = logging.getLogger(__name__)
-
-
-def run_command(cmd: list[str], check: bool = True, **kwargs) -> subprocess.CompletedProcess:
-  """Execute *cmd* and return the completed process."""
-  logger.debug("Running: %s", " ".join(cmd))
-  return subprocess.run(cmd, capture_output=True, text=True, check=check, **kwargs)
 
 
 def verify_venv(venv_path: Path) -> dict[str, Any]:
@@ -26,7 +21,12 @@ def verify_venv(venv_path: Path) -> dict[str, Any]:
   }
 
   if all([checks["exists"], checks["pyvenv_cfg"], checks["python_executable"]]):
-    result = run_command([str(venv_path / "bin/python"), "-m", "pip", "--version"], check=False)
+    result = run_command(
+      [str(venv_path / "bin/python"), "-m", "pip", "--version"],
+      check=False,
+      capture_output=True,
+      text=True,
+    )
     checks["pip_functional"] = result.returncode == 0
 
   checks["valid"] = all(
@@ -45,10 +45,10 @@ def verify_tool(tool_name: str, version_pattern: str | None = None) -> dict[str,
   """Verify tool installation and optionally match *version_pattern*."""
   result = {"installed": False, "version": None, "compatible": None}
 
-  check = run_command(["which", tool_name], check=False)
+  check = run_command(["which", tool_name], check=False, capture_output=True, text=True)
   if check.returncode == 0:
     result["installed"] = True
-    version_check = run_command([tool_name, "--version"], check=False)
+    version_check = run_command([tool_name, "--version"], check=False, capture_output=True, text=True)
     if version_check.returncode == 0:
       result["version"] = version_check.stdout.strip()
       if version_pattern is not None:

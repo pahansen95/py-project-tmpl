@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .state import BootstrapState
+from .platform import Platform, get_platform_handler
 
 __version__ = "1.0.0"
 
@@ -15,4 +16,4 @@ LAYERS = {
   4: "Developer Experience (git hooks, IDE)",
 }
 
-__all__ = ["LAYERS", "__version__", "BootstrapState"]
+__all__ = ["LAYERS", "__version__", "BootstrapState", "Platform", "get_platform_handler"]

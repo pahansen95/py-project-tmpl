@@ -12,6 +12,7 @@ from pathlib import Path
 
 from helpers.utils import configure_logging, find_project_root
 from . import LAYERS
+from .platform import get_platform_handler
 from .state import BootstrapState
 
 logger = logging.getLogger(__name__)
@@ -199,6 +200,8 @@ Examples:
     try:
       with open(args.input_state) as f:
         state = BootstrapState.from_dict(json.load(f))
+      if state.platform is None:
+        state.platform = get_platform_handler()
       logger.info("Loaded initial state from %s", args.input_state)
     except Exception as e:
       logger.error("Failed to load input state: %s", e)
@@ -211,6 +214,7 @@ Examples:
       project_root = find_project_root()
 
     state = BootstrapState(project_root=str(project_root))
+    state.platform = get_platform_handler()
     logger.debug("Using project root: %s", project_root)
 
   # Execute layers

@@ -6,15 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import platform
 import subprocess
 import sys
-import urllib.request
 from pathlib import Path
 from typing import Any
 
 from .state import BootstrapState
-from .verify import verify_tool
+from .platform import get_platform_handler
 
 logger = logging.getLogger(__name__)
 
@@ -41,129 +39,14 @@ def check_command_exists(cmd: str) -> bool:
   return result.returncode == 0
 
 
-def install_uv() -> dict[str, Any]:
-  """Install uv package manager."""
-  result = {"uv": {"installed": False, "version": None, "error": None}}
-
-  existing = verify_tool("uv")
-  if existing["installed"]:
-    result["uv"]["installed"] = True
-    result["uv"]["version"] = existing["version"]
-    logger.info("uv already installed: %s", existing["version"])
-    return result
-
-  # Install uv
-  try:
-    logger.info("Installing uv package manager...")
-
-    # Download and run installer
-    if platform.system() == "Windows":
-      # Windows PowerShell installation
-      ps_cmd = "irm https://astral.sh/uv/install.ps1 | iex"
-      subprocess.run(["powershell", "-Command", ps_cmd], check=True)
-    else:
-      # Unix-like installation
-      installer_url = "https://astral.sh/uv/install.sh"
-      with urllib.request.urlopen(installer_url) as response:
-        installer_script = response.read().decode("utf-8")
-
-      # Run installer
-      process = subprocess.Popen(
-        ["sh", "-"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-      )
-      stdout, stderr = process.communicate(installer_script)
-
-      if process.returncode != 0:
-        raise subprocess.CalledProcessError(process.returncode, "uv installer", stderr)
-
-    # Verify installation
-    verification = verify_tool("uv")
-    if verification["installed"]:
-      result["uv"]["installed"] = True
-      result["uv"]["version"] = verification["version"]
-      logger.info("uv installed successfully: %s", verification["version"])
-    else:
-      result["uv"]["error"] = "uv not found after installation"
-      logger.error("uv installation verification failed")
-
-  except Exception as e:
-    result["uv"]["error"] = str(e)
-    logger.error("Failed to install uv: %s", e)
-
-  return result
+def install_uv(platform_handler) -> dict[str, Any]:
+  """Install uv using the provided *platform_handler*."""
+  return platform_handler.install_uv()
 
 
-def install_pyenv() -> dict[str, Any]:
-  """Install pyenv for Python version management."""
-  result = {"pyenv": {"installed": False, "version": None, "error": None}}
-
-  existing = verify_tool("pyenv")
-  if existing["installed"]:
-    result["pyenv"]["installed"] = True
-    result["pyenv"]["version"] = existing["version"]
-    logger.info("pyenv already installed: %s", existing["version"])
-    return result
-
-  # Platform-specific installation
-  system = platform.system()
-
-  try:
-    if system == "Darwin":  # macOS
-      # Try homebrew first
-      if check_command_exists("brew"):
-        logger.info("Installing pyenv via Homebrew...")
-        run_command(["brew", "install", "pyenv"], check=True)
-        result["pyenv"]["installed"] = True
-      else:
-        result["pyenv"]["error"] = "Homebrew not found, manual installation required"
-
-    elif system == "Linux":
-      logger.info("Installing pyenv via git...")
-
-      # Clone pyenv repository
-      pyenv_root = Path.home() / ".pyenv"
-      if not pyenv_root.exists():
-        run_command(["git", "clone", "https://github.com/pyenv/pyenv.git", str(pyenv_root)], check=True)
-
-      # Add to shell profile
-      shell_config = Path.home() / ".bashrc"
-      if Path.home() / ".zshrc" in Path.home().iterdir():
-        shell_config = Path.home() / ".zshrc"
-
-      pyenv_init = (
-        '\n# pyenv\nexport PYENV_ROOT="$HOME/.pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"\neval "$(pyenv init -)"\n'
-      )
-
-      if shell_config.exists():
-        content = shell_config.read_text()
-        if "PYENV_ROOT" not in content:
-          shell_config.write_text(content + pyenv_init)
-          logger.info("Added pyenv to shell configuration")
-
-      result["pyenv"]["installed"] = True
-      result["pyenv"]["version"] = "git installation"
-
-    elif system == "Windows":
-      result["pyenv"]["error"] = "Windows requires pyenv-win, manual installation recommended"
-
-    else:
-      result["pyenv"]["error"] = f"Unsupported platform: {system}"
-
-  except Exception as e:
-    result["pyenv"]["error"] = str(e)
-    logger.error("Failed to install pyenv: %s", e)
-
-  verification = verify_tool("pyenv")
-  if verification["installed"]:
-    result["pyenv"]["installed"] = True
-    if result["pyenv"].get("version") is None:
-      result["pyenv"]["version"] = verification["version"]
-  else:
-    if result["pyenv"].get("error") is None:
-      result["pyenv"]["error"] = "pyenv not found after installation"
-      logger.error("pyenv installation verification failed")
-
-  return result
+def install_pyenv(platform_handler) -> dict[str, Any]:
+  """Install pyenv using the provided *platform_handler*."""
+  return platform_handler.install_pyenv()
 
 
 def ensure_python_version(target_version: str) -> dict[str, Any]:
@@ -249,20 +132,22 @@ def main() -> None:
     input_state["project_root"] = str(Path.cwd())
 
   state = BootstrapState.from_dict(input_state)
+  if state.platform is None:
+    state.platform = get_platform_handler()
   project_root = Path(state.project_root)
 
   layer_results: dict[str, Any] = {}
 
   # Install uv
   if not args.skip_uv:
-    uv_res = install_uv()
+    uv_res = install_uv(state.platform)
     layer_results.update(uv_res)
     if uv_res.get("uv", {}).get("installed"):
       state.installed_tools["uv"] = uv_res["uv"]
 
   # Install pyenv (optional, not critical)
   if not args.skip_pyenv:
-    pyenv_res = install_pyenv()
+    pyenv_res = install_pyenv(state.platform)
     layer_results.update(pyenv_res)
     if pyenv_res.get("pyenv", {}).get("installed"):
       state.installed_tools["pyenv"] = pyenv_res["pyenv"]

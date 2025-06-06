@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 
+from .platform import Platform
+
 import logging
 
 """Structured state object for the bootstrap helper."""
@@ -15,7 +17,7 @@ class BootstrapState:
   """State passed between bootstrap layers."""
 
   project_root: str
-  platform: Optional[Any] = None
+  platform: Optional[Platform] = None
   layer: int = 0
   layers: List[Dict[str, Any]] = field(default_factory=list)
 

@@ -96,8 +96,15 @@ def print_summary(final_state: dict[str, Any]) -> None:
               print(f"    {key}: {value}")
 
 
-def main() -> None:
-  """Orchestrate bootstrap layers."""
+def main(argv: list[str] | None = None) -> int:
+  """Orchestrate bootstrap layers.
+  
+  Args:
+    argv: Command line arguments (defaults to sys.argv[1:])
+    
+  Returns:
+    Exit code (0 for success, non-zero for failure)
+  """
   parser = argparse.ArgumentParser(description="Bootstrap Orchestrator")
   parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
   parser.add_argument("--from-layer", type=int, choices=[0, 1, 2, 3, 4], 
@@ -114,7 +121,7 @@ def main() -> None:
                       help="Save final state to JSON file")
   parser.add_argument("--input-state", type=Path,
                       help="Load initial state from JSON file")
-  args = parser.parse_args()
+  args = parser.parse_args(argv)
   
   setup_logging(args.verbose)
   
@@ -187,7 +194,7 @@ def main() -> None:
         new_state["failed_at_layer"] = layer_num
         with open(args.output_state, "w") as f:
           json.dump(new_state, f, indent=2)
-      sys.exit(1)
+      return 1
     
     # Update state for next layer
     state = new_state
@@ -202,7 +209,8 @@ def main() -> None:
   print_summary(state)
   
   logger.info("Bootstrap complete")
+  return 0
 
 
 if __name__ == "__main__":
-  main()
+  sys.exit(main())

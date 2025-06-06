@@ -1,4 +1,8 @@
-"""Bootstrap module for layered environment setup."""
+"""Bootstrap module for layered environment setup.
+
+This module can be executed as:
+  python -m helpers.bootstrap
+"""
 
 from __future__ import annotations
 
@@ -14,7 +18,7 @@ LAYERS = {
     4: "Developer Experience (git hooks, IDE)"
 }
 
-# Export main entry point
-from .orchestrator import main as orchestrate
+# Export key functions for programmatic use
+from .orchestrator import main as orchestrate, run_layer
 
-__all__ = ["orchestrate", "LAYERS"]
+__all__ = ["orchestrate", "run_layer", "LAYERS", "__version__"]

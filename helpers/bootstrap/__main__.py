@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Bootstrap the development environment - main entry point."""
+"""Bootstrap module main entry point.
+
+This module provides the primary interface for bootstrapping the development
+environment. It can be executed as:
+  - python -m helpers.bootstrap
+  - python helpers/bootstrap/
+"""
 
 from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
-
-# Add parent directory to path to import from helpers
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from . import orchestrator
 
@@ -20,24 +22,24 @@ def main() -> None:
     formatter_class=argparse.RawDescriptionHelpFormatter,
     epilog="""
 Layers:
-  0 - Foundation (OS, architecture, network) [not implemented]
-  1 - Prerequisites (shell, git, base Python) [not implemented]
+  0 - Foundation (OS, architecture, network)
+  1 - Prerequisites (shell, git, base Python)
   2 - Managed Tools (uv, pyenv, Python version)
   3 - Project Environment (venv, dependencies)
   4 - Developer Experience (git hooks, IDE config)
 
 Examples:
-  # Full bootstrap (layers 2-4)
-  python helpers/bootstrap.py
+  # Full bootstrap (layers 0-4)
+  python -m helpers.bootstrap
   
   # Bootstrap only managed tools
-  python helpers/bootstrap.py --only-layer 2
+  python -m helpers.bootstrap --only-layer 2
   
-  # Skip pyenv installation
-  python helpers/bootstrap.py --skip-layer 2
+  # Skip optional components
+  python -m helpers.bootstrap --quick
   
-  # Verbose output
-  python helpers/bootstrap.py -v
+  # Minimal setup (venv + deps only)
+  python -m helpers.bootstrap --minimal
 """
   )
   
@@ -50,11 +52,11 @@ Examples:
   parser.add_argument("--ci", action="store_true",
                       help="CI mode (non-interactive, fail on warnings)")
   
-  # Pass through to orchestrator
+  # Layer control arguments
   parser.add_argument("--from-layer", type=int, choices=[0, 1, 2, 3, 4],
-                      help="Start from specific layer")
+                      help="Start from specific layer (default: 0)")
   parser.add_argument("--to-layer", type=int, choices=[0, 1, 2, 3, 4],
-                      help="Stop after specific layer")
+                      help="Stop after specific layer (default: 4)")
   parser.add_argument("--only-layer", type=int, choices=[0, 1, 2, 3, 4],
                       help="Run only the specified layer")
   parser.add_argument("--skip-layer", type=int, action="append",
@@ -73,10 +75,8 @@ Examples:
   if args.minimal:
     orch_args.extend(["--from-layer", "2", "--to-layer", "3"])
   elif args.quick:
-    # Quick mode - skip optional tools like pyenv
-    if not args.skip_layer:
-      args.skip_layer = []
-    # Would skip pyenv in layer 2 with a flag when implemented
+    # Quick mode - could add layer-specific flags here
+    pass
   
   # Pass through layer control arguments
   if args.from_layer is not None:
@@ -91,12 +91,8 @@ Examples:
   if args.dry_run:
     orch_args.append("--dry-run")
   
-  # Set default range to layers 2-4 since 0-1 aren't implemented
-  if not any(arg in orch_args for arg in ["--from-layer", "--only-layer", "--minimal"]):
-    orch_args.extend(["--from-layer", "2"])
-  
   # Run the orchestrator
-  orchestrator.main(orch_args)
+  sys.exit(orchestrator.main(orch_args))
 
 
 if __name__ == "__main__":

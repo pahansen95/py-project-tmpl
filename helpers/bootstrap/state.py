@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-"""Structured state object for the bootstrap helper."""
-
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 
 import logging
+
+"""Structured state object for the bootstrap helper."""
 
 logger = logging.getLogger(__name__)
 

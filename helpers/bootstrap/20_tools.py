@@ -6,13 +6,14 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import platform
 import subprocess
 import sys
 import urllib.request
 from pathlib import Path
 from typing import Any
+
+from .state import BootstrapState
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ def check_command_exists(cmd: str) -> bool:
 def install_uv() -> dict[str, Any]:
   """Install uv package manager."""
   result = {"uv": {"installed": False, "version": None, "error": None}}
-  
+
   # Check if already installed
   if check_command_exists("uv"):
     version_result = run_command(["uv", "--version"], check=False)
@@ -51,11 +52,11 @@ def install_uv() -> dict[str, Any]:
       result["uv"]["version"] = version_result.stdout.strip()
       logger.info("uv already installed: %s", result["uv"]["version"])
       return result
-  
+
   # Install uv
   try:
     logger.info("Installing uv package manager...")
-    
+
     # Download and run installer
     if platform.system() == "Windows":
       # Windows PowerShell installation
@@ -65,21 +66,17 @@ def install_uv() -> dict[str, Any]:
       # Unix-like installation
       installer_url = "https://astral.sh/uv/install.sh"
       with urllib.request.urlopen(installer_url) as response:
-        installer_script = response.read().decode('utf-8')
-      
+        installer_script = response.read().decode("utf-8")
+
       # Run installer
       process = subprocess.Popen(
-        ["sh", "-"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
+        ["sh", "-"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
       )
       stdout, stderr = process.communicate(installer_script)
-      
+
       if process.returncode != 0:
         raise subprocess.CalledProcessError(process.returncode, "uv installer", stderr)
-    
+
     # Verify installation
     if check_command_exists("uv"):
       version_result = run_command(["uv", "--version"], check=False)
@@ -89,18 +86,18 @@ def install_uv() -> dict[str, Any]:
     else:
       result["uv"]["error"] = "uv not found after installation"
       logger.error("uv installation verification failed")
-      
+
   except Exception as e:
     result["uv"]["error"] = str(e)
     logger.error("Failed to install uv: %s", e)
-  
+
   return result
 
 
 def install_pyenv() -> dict[str, Any]:
   """Install pyenv for Python version management."""
   result = {"pyenv": {"installed": False, "version": None, "error": None}}
-  
+
   # Check if already installed
   if check_command_exists("pyenv"):
     version_result = run_command(["pyenv", "--version"], check=False)
@@ -109,10 +106,10 @@ def install_pyenv() -> dict[str, Any]:
       result["pyenv"]["version"] = version_result.stdout.strip()
       logger.info("pyenv already installed: %s", result["pyenv"]["version"])
       return result
-  
+
   # Platform-specific installation
   system = platform.system()
-  
+
   try:
     if system == "Darwin":  # macOS
       # Try homebrew first
@@ -122,59 +119,50 @@ def install_pyenv() -> dict[str, Any]:
         result["pyenv"]["installed"] = True
       else:
         result["pyenv"]["error"] = "Homebrew not found, manual installation required"
-    
+
     elif system == "Linux":
       logger.info("Installing pyenv via git...")
-      
+
       # Clone pyenv repository
       pyenv_root = Path.home() / ".pyenv"
       if not pyenv_root.exists():
-        run_command([
-          "git", "clone", 
-          "https://github.com/pyenv/pyenv.git", 
-          str(pyenv_root)
-        ], check=True)
-      
+        run_command(["git", "clone", "https://github.com/pyenv/pyenv.git", str(pyenv_root)], check=True)
+
       # Add to shell profile
       shell_config = Path.home() / ".bashrc"
       if Path.home() / ".zshrc" in Path.home().iterdir():
         shell_config = Path.home() / ".zshrc"
-      
-      pyenv_init = '\n# pyenv\nexport PYENV_ROOT="$HOME/.pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"\neval "$(pyenv init -)"\n'
-      
+
+      pyenv_init = (
+        '\n# pyenv\nexport PYENV_ROOT="$HOME/.pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"\neval "$(pyenv init -)"\n'
+      )
+
       if shell_config.exists():
         content = shell_config.read_text()
         if "PYENV_ROOT" not in content:
           shell_config.write_text(content + pyenv_init)
           logger.info("Added pyenv to shell configuration")
-      
+
       result["pyenv"]["installed"] = True
       result["pyenv"]["version"] = "git installation"
-      
+
     elif system == "Windows":
       result["pyenv"]["error"] = "Windows requires pyenv-win, manual installation recommended"
-    
+
     else:
       result["pyenv"]["error"] = f"Unsupported platform: {system}"
-    
+
   except Exception as e:
     result["pyenv"]["error"] = str(e)
     logger.error("Failed to install pyenv: %s", e)
-  
+
   return result
 
 
 def ensure_python_version(target_version: str) -> dict[str, Any]:
   """Ensure the target Python version is available."""
-  result = {
-    "python": {
-      "version": target_version,
-      "available": False,
-      "installed": False,
-      "error": None
-    }
-  }
-  
+  result = {"python": {"version": target_version, "available": False, "installed": False, "error": None}}
+
   # Check if Python version is already available
   try:
     # Try direct python command
@@ -186,19 +174,19 @@ def ensure_python_version(target_version: str) -> dict[str, Any]:
           result["python"]["installed"] = True
           logger.info("Python %s already available via %s", target_version, python_cmd)
           return result
-    
+
     # Try pyenv if available
     if check_command_exists("pyenv"):
       # Check installed versions
       versions_result = run_command(["pyenv", "versions", "--bare"], check=False)
       if versions_result.returncode == 0:
-        installed_versions = versions_result.stdout.strip().split('\n')
+        installed_versions = versions_result.stdout.strip().split("\n")
         if target_version in installed_versions:
           result["python"]["available"] = True
           result["python"]["installed"] = True
           logger.info("Python %s available via pyenv", target_version)
           return result
-      
+
       # Install via pyenv
       logger.info("Installing Python %s via pyenv...", target_version)
       install_result = run_command(["pyenv", "install", target_version], check=False)
@@ -208,14 +196,14 @@ def ensure_python_version(target_version: str) -> dict[str, Any]:
         logger.info("Python %s installed successfully", target_version)
       else:
         result["python"]["error"] = f"pyenv install failed: {install_result.stderr}"
-    
+
     else:
       result["python"]["error"] = "pyenv not available for Python installation"
-      
+
   except Exception as e:
     result["python"]["error"] = str(e)
     logger.error("Failed to ensure Python version: %s", e)
-  
+
   return result
 
 
@@ -236,9 +224,9 @@ def main() -> None:
   parser.add_argument("--skip-python", action="store_true", help="Skip Python installation")
   parser.add_argument("--python", help="Override Python version to install")
   args = parser.parse_args()
-  
+
   setup_logging(args.verbose)
-  
+
   # Read input state from stdin
   if not sys.stdin.isatty():
     try:
@@ -249,54 +237,47 @@ def main() -> None:
       input_state = {}
   else:
     input_state = {}
-  
-  # Determine project root
-  project_root = Path(input_state.get("project_root", Path.cwd()))
-  
-  # Layer 2 operations
-  output_state = {
-    "layer": 2,
-    "name": "managed_tools",
-    "project_root": str(project_root),
-    "results": {}
-  }
-  
+
+  if "project_root" not in input_state:
+    input_state["project_root"] = str(Path.cwd())
+
+  state = BootstrapState.from_dict(input_state)
+  project_root = Path(state.project_root)
+
+  layer_results: dict[str, Any] = {}
+
   # Install uv
   if not args.skip_uv:
-    output_state["results"].update(install_uv())
-  
+    uv_res = install_uv()
+    layer_results.update(uv_res)
+    if uv_res.get("uv", {}).get("installed"):
+      state.installed_tools["uv"] = uv_res["uv"]
+
   # Install pyenv (optional, not critical)
   if not args.skip_pyenv:
-    output_state["results"].update(install_pyenv())
-  
+    pyenv_res = install_pyenv()
+    layer_results.update(pyenv_res)
+    if pyenv_res.get("pyenv", {}).get("installed"):
+      state.installed_tools["pyenv"] = pyenv_res["pyenv"]
+
   # Ensure Python version
   if not args.skip_python:
-    # Determine target Python version
-    python_version = args.python
-    if not python_version:
-      python_version = get_project_python_version(project_root)
-    if not python_version:
-      python_version = input_state.get("python_version", "3.13")
-    
-    output_state["results"].update(ensure_python_version(python_version))
-    output_state["python_version"] = python_version
-  
-  # Check for critical failures
-  if not args.skip_uv and not output_state["results"].get("uv", {}).get("installed"):
+    python_version = args.python or get_project_python_version(project_root) or "3.13"
+    py_res = ensure_python_version(python_version)
+    layer_results.update(py_res)
+    state.installed_tools["python"] = py_res.get("python", {})
+    state.record_decision("python", python_version)
+
+  if not args.skip_uv and not state.installed_tools.get("uv", {}).get("installed"):
     logger.error("Critical: uv installation failed")
-    output_state["critical_error"] = "uv installation failed"
-  
-  # Pass through previous layer data
-  if "layers" in input_state:
-    output_state["layers"] = input_state["layers"]
-  else:
-    output_state["layers"] = []
-  output_state["layers"].append({k: v for k, v in output_state.items() if k != "layers"})
-  
-  # Output state to stdout
-  json.dump(output_state, sys.stdout, indent=2)
-  print()  # Newline for readability
-  
+    state.errors.append("uv installation failed")
+
+  state.layer = 2
+  state.layers.append({"layer": 2, "name": "managed_tools", "results": layer_results})
+
+  json.dump(state.to_dict(), sys.stdout, indent=2)
+  print()
+
   logger.info("Layer 2 configuration complete")
 
 

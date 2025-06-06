@@ -1,15 +1,10 @@
-"""Bootstrap module for layered environment setup.
-
-This module can be executed as:
-  python -m helpers.bootstrap
-"""
+"""Bootstrap module for layered environment setup."""
 
 from __future__ import annotations
 
-# Version of the bootstrap system
 __version__ = "1.0.0"
 
-# Layer definitions for reference
+# Layer definitions
 LAYERS = {
     0: "Foundation (OS, architecture, network)",
     1: "Prerequisites (shell, git, base Python)",
@@ -18,7 +13,4 @@ LAYERS = {
     4: "Developer Experience (git hooks, IDE)"
 }
 
-# Export key functions for programmatic use
-from .orchestrator import main as orchestrate, run_layer
-
-__all__ = ["orchestrate", "run_layer", "LAYERS", "__version__"]
+__all__ = ["LAYERS", "__version__"]

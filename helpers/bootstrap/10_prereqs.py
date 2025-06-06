@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .state import BootstrapState
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,7 +36,7 @@ def run_command(cmd: list[str], timeout: int = 5) -> tuple[int, str, str]:
       capture_output=True,
       text=True,
       timeout=timeout,
-      env={**os.environ, "LC_ALL": "C"}  # Ensure consistent output
+      env={**os.environ, "LC_ALL": "C"},  # Ensure consistent output
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()
   except subprocess.TimeoutExpired:
@@ -55,35 +57,37 @@ def probe_shell_environment() -> dict[str, Any]:
     "terminal": os.environ.get("TERM"),
     "color_support": False,
   }
-  
+
   # Current shell
   shell_env = os.environ.get("SHELL")
   if shell_env:
     result["current_shell"] = shell_env
     shell_name = Path(shell_env).name
-    
+
     # Get shell version
     if shell_name in ["bash", "zsh", "fish"]:
       code, stdout, _ = run_command([shell_env, "--version"])
       if code == 0 and stdout:
         result["shell_version"] = stdout.split("\n")[0]
-  
+
   # Available shells
   shells_to_check = ["bash", "zsh", "fish", "sh", "dash"]
   for shell in shells_to_check:
     code, stdout, _ = run_command(["which", shell])
     if code == 0 and stdout:
-      result["available_shells"].append({
-        "name": shell,
-        "path": stdout,
-      })
-  
+      result["available_shells"].append(
+        {
+          "name": shell,
+          "path": stdout,
+        }
+      )
+
   # Color support
   if result["terminal"] and "color" in result["terminal"].lower():
     result["color_support"] = True
   elif os.environ.get("COLORTERM"):
     result["color_support"] = True
-  
+
   return result
 
 
@@ -96,20 +100,20 @@ def probe_git_installation() -> dict[str, Any]:
     "config": {},
     "features": {},
   }
-  
+
   # Check if git is installed
   code, stdout, _ = run_command(["which", "git"])
   if code == 0 and stdout:
     result["installed"] = True
     result["path"] = stdout
-    
+
     # Get version
     code, stdout, _ = run_command(["git", "--version"])
     if code == 0:
       match = re.search(r"git version ([\d.]+)", stdout)
       if match:
         result["version"] = match.group(1)
-    
+
     # Get basic config
     config_items = [
       ("user.name", "user_name"),
@@ -117,20 +121,20 @@ def probe_git_installation() -> dict[str, Any]:
       ("core.editor", "editor"),
       ("init.defaultBranch", "default_branch"),
     ]
-    
+
     for git_key, result_key in config_items:
       code, stdout, _ = run_command(["git", "config", "--global", git_key])
       if code == 0 and stdout:
         result["config"][result_key] = stdout
-    
+
     # Check for common features
     code, _, _ = run_command(["git", "lfs", "version"])
     result["features"]["lfs"] = code == 0
-    
+
     # Check if we're in a git repository
     code, stdout, _ = run_command(["git", "rev-parse", "--git-dir"])
     result["in_repository"] = code == 0
-    
+
   return result
 
 
@@ -147,23 +151,29 @@ def probe_python_installations() -> dict[str, Any]:
     "pip_installed": False,
     "venv_module": False,
   }
-  
+
   # Check for pip
   code, stdout, _ = run_command([sys.executable, "-m", "pip", "--version"])
   if code == 0:
     result["pip_installed"] = True
     result["pip_version"] = stdout.split()[1] if stdout else None
-  
+
   # Check for venv module
   code, _, _ = run_command([sys.executable, "-m", "venv", "--help"], timeout=2)
   result["venv_module"] = code == 0
-  
+
   # Find other Python installations
   python_commands = [
-    "python", "python3", "python3.13", "python3.12", "python3.11", 
-    "python3.10", "python3.9", "python3.8"
+    "python",
+    "python3",
+    "python3.13",
+    "python3.12",
+    "python3.11",
+    "python3.10",
+    "python3.9",
+    "python3.8",
   ]
-  
+
   found_pythons = {}
   for cmd in python_commands:
     code, stdout, _ = run_command(["which", cmd])
@@ -183,9 +193,9 @@ def probe_python_installations() -> dict[str, Any]:
               "version": version,
               "real_path": str(real_path),
             }
-  
+
   result["available_pythons"] = list(found_pythons.values())
-  
+
   return result
 
 
@@ -196,7 +206,7 @@ def probe_package_managers() -> dict[str, Any]:
     "python": {},
     "language": {},
   }
-  
+
   # System package managers
   system_pms = {
     "apt": ["apt", "--version"],
@@ -208,7 +218,7 @@ def probe_package_managers() -> dict[str, Any]:
     "choco": ["choco", "--version"],
     "scoop": ["scoop", "--version"],
   }
-  
+
   for name, cmd in system_pms.items():
     code, stdout, _ = run_command(cmd)
     if code == 0:
@@ -216,7 +226,7 @@ def probe_package_managers() -> dict[str, Any]:
         "installed": True,
         "version": stdout.split("\n")[0] if stdout else "unknown",
       }
-  
+
   # Python package managers
   python_pms = {
     "pip": [sys.executable, "-m", "pip", "--version"],
@@ -227,7 +237,7 @@ def probe_package_managers() -> dict[str, Any]:
     "conda": ["conda", "--version"],
     "mamba": ["mamba", "--version"],
   }
-  
+
   for name, cmd in python_pms.items():
     code, stdout, _ = run_command(cmd)
     if code == 0:
@@ -235,7 +245,7 @@ def probe_package_managers() -> dict[str, Any]:
         "installed": True,
         "version": stdout.strip(),
       }
-  
+
   # Other language package managers (for context)
   other_pms = {
     "npm": ["npm", "--version"],
@@ -243,7 +253,7 @@ def probe_package_managers() -> dict[str, Any]:
     "cargo": ["cargo", "--version"],
     "go": ["go", "version"],
   }
-  
+
   for name, cmd in other_pms.items():
     code, stdout, _ = run_command(cmd)
     if code == 0:
@@ -251,7 +261,7 @@ def probe_package_managers() -> dict[str, Any]:
         "installed": True,
         "version": stdout.strip(),
       }
-  
+
   return result
 
 
@@ -262,7 +272,7 @@ def probe_development_tools() -> dict[str, Any]:
     "tools": {},
     "version_managers": {},
   }
-  
+
   # Text editors/IDEs
   editors = {
     "vim": ["vim", "--version"],
@@ -272,12 +282,12 @@ def probe_development_tools() -> dict[str, Any]:
     "subl": ["subl", "--version"],
     "atom": ["atom", "--version"],
   }
-  
+
   for name, cmd in editors.items():
     code, stdout, _ = run_command(cmd)
     if code == 0:
       result["editors"][name] = True
-  
+
   # Development tools
   tools = {
     "make": ["make", "--version"],
@@ -288,7 +298,7 @@ def probe_development_tools() -> dict[str, Any]:
     "wget": ["wget", "--version"],
     "jq": ["jq", "--version"],
   }
-  
+
   for name, cmd in tools.items():
     code, stdout, _ = run_command(cmd)
     if code == 0:
@@ -296,7 +306,7 @@ def probe_development_tools() -> dict[str, Any]:
         "installed": True,
         "version": stdout.split("\n")[0] if stdout else "unknown",
       }
-  
+
   # Version managers
   version_managers = {
     "pyenv": ["pyenv", "--version"],
@@ -304,7 +314,7 @@ def probe_development_tools() -> dict[str, Any]:
     "nvm": ["nvm", "--version"],
     "asdf": ["asdf", "--version"],
   }
-  
+
   for name, cmd in version_managers.items():
     # Some version managers are shell functions, try different approaches
     if name == "nvm":
@@ -319,32 +329,32 @@ def probe_development_tools() -> dict[str, Any]:
           "installed": True,
           "version": stdout.strip(),
         }
-  
+
   return result
 
 
 def check_prerequisites() -> dict[str, bool]:
   """Check if minimum prerequisites are met."""
   checks = {}
-  
+
   # Essential checks
   code, _, _ = run_command(["which", "git"])
   checks["git_available"] = code == 0
-  
+
   # Python 3.7+ (for subprocess.run capture_output parameter)
   checks["python_version_ok"] = sys.version_info >= (3, 7)
-  
+
   # Can create virtual environments
   code, _, _ = run_command([sys.executable, "-m", "venv", "--help"], timeout=2)
   checks["venv_available"] = code == 0
-  
+
   # Network utilities
   code, _, _ = run_command(["which", "curl"])
   curl_available = code == 0
   code, _, _ = run_command(["which", "wget"])
   wget_available = code == 0
   checks["download_tool_available"] = curl_available or wget_available
-  
+
   return checks
 
 
@@ -354,61 +364,51 @@ def main() -> None:
   parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
   parser.add_argument("--quick", action="store_true", help="Skip slow probes")
   args = parser.parse_args()
-  
+
   setup_logging(args.verbose)
   logger.info("Starting prerequisites layer probe")
-  
+
   # Read input state from stdin (if any)
   if not sys.stdin.isatty():
     try:
       input_state = json.load(sys.stdin)
       logger.debug("Received input state: %s", input_state)
     except json.JSONDecodeError:
+      logger.warning("Failed to parse input JSON, using defaults")
       input_state = {}
   else:
     input_state = {}
-  
-  # Use project root from Layer 0 if available
-  project_root = input_state.get("project_root", str(Path.cwd()))
-  
+
+  if "project_root" not in input_state:
+    input_state["project_root"] = str(Path.cwd())
+
+  state = BootstrapState.from_dict(input_state)
+
   # Layer 1 operations
-  output_state = {
-    "layer": 1,
-    "name": "prerequisites",
-    "project_root": project_root,
-    "results": {
-      "shell": probe_shell_environment(),
-      "git": probe_git_installation(),
-      "python": probe_python_installations(),
-    }
+  layer_results = {
+    "shell": probe_shell_environment(),
+    "git": probe_git_installation(),
+    "python": probe_python_installations(),
   }
-  
+
   # Slower probes (optional)
   if not args.quick:
-    output_state["results"]["package_managers"] = probe_package_managers()
-    output_state["results"]["dev_tools"] = probe_development_tools()
-  
+    layer_results["package_managers"] = probe_package_managers()
+    layer_results["dev_tools"] = probe_development_tools()
+
   # Check prerequisites
   prerequisite_checks = check_prerequisites()
-  output_state["prerequisites_met"] = all(prerequisite_checks.values())
-  output_state["prerequisite_checks"] = prerequisite_checks
-  
-  # Pass through previous layer data
-  if "layers" in input_state:
-    output_state["layers"] = input_state["layers"]
-  else:
-    output_state["layers"] = []
-  output_state["layers"].append({k: v for k, v in output_state.items() if k != "layers"})
-  
-  # Include key info from previous layers
-  if input_state.get("foundation_ready"):
-    output_state["foundation_ready"] = input_state["foundation_ready"]
-  
+  state.prerequisites_met = all(prerequisite_checks.values())
+  state.prerequisite_checks = prerequisite_checks
+
+  state.layer = 1
+  state.layers.append({"layer": 1, "name": "prerequisites", "results": layer_results})
+
   # Output state to stdout
-  json.dump(output_state, sys.stdout, indent=2)
+  json.dump(state.to_dict(), sys.stdout, indent=2)
   print()  # Newline for readability
-  
-  if output_state["prerequisites_met"]:
+
+  if state.prerequisites_met:
     logger.info("Prerequisites layer probe complete - all requirements met")
   else:
     logger.warning("Prerequisites layer probe complete - missing requirements")

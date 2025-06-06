@@ -34,10 +34,10 @@ environment and install the remaining tools.
 ## Helpers
 
 - `python helpers/build.py` – build distribution packages
-- `python helpers/test.py` – run pytest
-- `python helpers/format.py` – format via Ruff
-- `python helpers/lint.py` – lint via Ruff
-- `python helpers/docs.py [build|serve]` – MkDocs commands
+- `python -m helpers.tools.test` – run pytest
+- `python -m helpers.tools.format` – format via Ruff
+- `python -m helpers.tools.lint` – lint via Ruff
+- `python -m helpers.tools.docs [build|serve]` – MkDocs commands
 
 All helpers support `-v/--verbose` to increase logging detail and
 `--log-file` to duplicate logs to a file.

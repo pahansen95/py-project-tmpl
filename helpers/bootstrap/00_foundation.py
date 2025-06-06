@@ -15,17 +15,10 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .state import BootstrapState
+from ..utils import configure_logging
+
 logger = logging.getLogger(__name__)
-
-
-def setup_logging(verbose: bool = False) -> None:
-  """Configure logging to stderr."""
-  level = logging.DEBUG if verbose else logging.INFO
-  logging.basicConfig(
-    level=level,
-    format="[L0] %(levelname)s: %(message)s",
-    stream=sys.stderr,
-  )
 
 
 def probe_os_info() -> dict[str, Any]:
@@ -50,7 +43,7 @@ def probe_network_connectivity() -> dict[str, Any]:
     "package_registry": False,
     "latency_ms": None,
   }
-  
+
   # Test DNS resolution
   try:
     socket.gethostbyname("pypi.org")
@@ -58,16 +51,17 @@ def probe_network_connectivity() -> dict[str, Any]:
     logger.debug("DNS resolution successful")
   except socket.gaierror:
     logger.warning("DNS resolution failed")
-  
+
   # Test HTTPS connectivity
   test_urls = [
     ("https://pypi.org", "package_registry"),
     ("https://github.com", "https_connectivity"),
   ]
-  
+
   for url, key in test_urls:
     try:
       import urllib.request
+
       start_time = time.time()
       with urllib.request.urlopen(url, timeout=5) as response:
         if response.status == 200:
@@ -77,7 +71,7 @@ def probe_network_connectivity() -> dict[str, Any]:
       logger.debug(f"Connected to {url}")
     except Exception as e:
       logger.debug(f"Failed to connect to {url}: {e}")
-  
+
   return result
 
 
@@ -91,10 +85,11 @@ def probe_filesystem() -> dict[str, Any]:
     "temp_dir": None,
     "home_dir": None,
   }
-  
+
   # Test temp directory
   try:
     import tempfile
+
     temp_dir = tempfile.gettempdir()
     test_file = Path(temp_dir) / f"bootstrap_test_{os.getpid()}.tmp"
     test_file.write_text("test")
@@ -104,7 +99,7 @@ def probe_filesystem() -> dict[str, Any]:
     logger.debug(f"Temp directory writable: {temp_dir}")
   except Exception:
     logger.warning("Cannot write to temp directory")
-  
+
   # Test home directory
   try:
     home = Path.home()
@@ -117,7 +112,7 @@ def probe_filesystem() -> dict[str, Any]:
       logger.debug(f"Home directory writable: {home}")
   except Exception:
     logger.warning("Cannot write to home directory")
-  
+
   # Test current directory
   try:
     test_file = Path(f".bootstrap_test_{os.getpid()}.tmp")
@@ -127,7 +122,7 @@ def probe_filesystem() -> dict[str, Any]:
     logger.debug("Current directory writable")
   except Exception:
     logger.warning("Cannot write to current directory")
-  
+
   # Check disk space
   try:
     if platform.system() != "Windows":
@@ -135,12 +130,13 @@ def probe_filesystem() -> dict[str, Any]:
       result["disk_space_mb"] = (stat.f_bavail * stat.f_frsize) // (1024 * 1024)
     else:
       import shutil
+
       usage = shutil.disk_usage(".")
       result["disk_space_mb"] = usage.free // (1024 * 1024)
     logger.debug(f"Available disk space: {result['disk_space_mb']} MB")
   except Exception:
     logger.warning("Cannot determine disk space")
-  
+
   return result
 
 
@@ -155,11 +151,11 @@ def probe_environment_variables() -> dict[str, Any]:
     "virtual_env": os.environ.get("VIRTUAL_ENV"),
     "python_path": os.environ.get("PYTHONPATH"),
   }
-  
+
   # Check for CI/CD indicators
   ci_vars = ["CI", "CONTINUOUS_INTEGRATION", "GITHUB_ACTIONS", "GITLAB_CI", "JENKINS_URL"]
   result["ci_environment"] = any(os.environ.get(var) for var in ci_vars)
-  
+
   return result
 
 
@@ -171,12 +167,12 @@ def probe_system_resources() -> dict[str, Any]:
     "python_version": sys.version,
     "python_executable": sys.executable,
   }
-  
+
   try:
     result["cpu_count"] = os.cpu_count()
   except Exception:
     logger.warning("Cannot determine CPU count")
-  
+
   # Memory detection
   try:
     if platform.system() == "Linux":
@@ -192,8 +188,10 @@ def probe_system_resources() -> dict[str, Any]:
       result["memory_mb"] = bytes_mem // (1024 * 1024)
     elif platform.system() == "Windows":
       import ctypes
+
       kernel32 = ctypes.windll.kernel32
       c_ulonglong = ctypes.c_ulonglong
+
       class MEMORYSTATUSEX(ctypes.Structure):
         _fields_ = [
           ("dwLength", ctypes.c_ulong),
@@ -206,13 +204,14 @@ def probe_system_resources() -> dict[str, Any]:
           ("ullAvailVirtual", c_ulonglong),
           ("ullExtendedVirtual", c_ulonglong),
         ]
+
       stat = MEMORYSTATUSEX()
       stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
       kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
       result["memory_mb"] = stat.ullTotalPhys // (1024 * 1024)
   except Exception as e:
     logger.warning(f"Cannot determine system memory: {e}")
-  
+
   return result
 
 
@@ -222,61 +221,58 @@ def main() -> None:
   parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
   parser.add_argument("--skip-network", action="store_true", help="Skip network connectivity tests")
   args = parser.parse_args()
-  
-  setup_logging(args.verbose)
+
+  configure_logging(args.verbose)
   logger.info("Starting foundation layer probe")
-  
+
   # Read input state from stdin (if any)
   if not sys.stdin.isatty():
     try:
       input_state = json.load(sys.stdin)
       logger.debug("Received input state: %s", input_state)
     except json.JSONDecodeError:
+      logger.warning("Failed to parse input JSON, using defaults")
       input_state = {}
   else:
     input_state = {}
-  
+
+  if "project_root" not in input_state:
+    input_state["project_root"] = str(Path.cwd())
+
+  state = BootstrapState.from_dict(input_state)
+
   # Layer 0 operations
-  output_state = {
-    "layer": 0,
-    "name": "foundation",
-    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    "project_root": str(Path.cwd()),
-    "results": {
-      "os": probe_os_info(),
-      "filesystem": probe_filesystem(),
-      "environment": probe_environment_variables(),
-      "resources": probe_system_resources(),
-    }
+  layer_results = {
+    "os": probe_os_info(),
+    "filesystem": probe_filesystem(),
+    "environment": probe_environment_variables(),
+    "resources": probe_system_resources(),
   }
-  
+
   # Network probe (can be slow, so optional)
   if not args.skip_network:
-    output_state["results"]["network"] = probe_network_connectivity()
-  
+    layer_results["network"] = probe_network_connectivity()
+
   # Determine if environment is suitable for bootstrap
   checks = {
-    "os_supported": output_state["results"]["os"]["system"] in ["Linux", "Darwin", "Windows"],
-    "disk_space_ok": (output_state["results"]["filesystem"]["disk_space_mb"] or 0) >= 500,
-    "can_write": output_state["results"]["filesystem"]["cwd_writable"],
-    "network_ok": not args.skip_network and output_state["results"].get("network", {}).get("https_connectivity", False),
+    "os_supported": layer_results["os"]["system"] in ["Linux", "Darwin", "Windows"],
+    "disk_space_ok": (layer_results["filesystem"]["disk_space_mb"] or 0) >= 500,
+    "can_write": layer_results["filesystem"]["cwd_writable"],
+    "network_ok": not args.skip_network and layer_results.get("network", {}).get("https_connectivity", False),
   }
-  
-  output_state["foundation_ready"] = all(checks.values())
-  output_state["foundation_checks"] = checks
-  
-  # Pass through previous layer data
-  if "layers" in input_state:
-    output_state["layers"] = input_state["layers"]
-  else:
-    output_state["layers"] = []
-  output_state["layers"].append({k: v for k, v in output_state.items() if k != "layers"})
-  
+
+  # Store readiness indicators as dynamic fields for compatibility
+  state.foundation_ready = all(checks.values())
+  state.foundation_checks = checks
+
+  state.layer = 0
+  state.layers.append({"layer": 0, "name": "foundation", "results": layer_results})
+
   # Output state to stdout
-  json.dump(output_state, sys.stdout, indent=2)
+  json.dump(state.to_dict(), sys.stdout, indent=2)
   print()  # Newline for readability
-  
-  if output_state["foundation_ready"]:
+
+  if state.foundation_ready:
     logger.info("Foundation layer probe complete - environment suitable")
   else:
     logger.warning("Foundation layer probe complete - issues detected")

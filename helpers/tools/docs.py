@@ -2,7 +2,7 @@
 
 import argparse
 
-from .utils import add_common_args, configure_logging, logger, run_command, setup_working_directory
+from ..utils import add_common_args, configure_logging, logger, run_command, setup_working_directory
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -12,7 +12,7 @@ def main(argv: list[str] | None = None) -> None:
   args = parser.parse_args(argv)
 
   configure_logging(args.verbose, args.log_file)
-  
+
   with setup_working_directory(args):
     logger.debug("docs action: %s", args.action)
     if args.action == "build":

@@ -9,15 +9,16 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 
 from helpers.utils import configure_logging, find_project_root
 from . import LAYERS
+from .platform import get_platform_handler
+from .state import BootstrapState
 
 logger = logging.getLogger(__name__)
 
 
-def run_layer(layer_num: int, input_state: dict[str, Any], verbose: int = 0) -> dict[str, Any]:
+def run_layer(layer_num: int, input_state: BootstrapState, verbose: int = 0) -> BootstrapState:
   """Execute a single bootstrap layer with JSON state piping."""
   layer_scripts = {
     0: "00_foundation.py",
@@ -29,11 +30,13 @@ def run_layer(layer_num: int, input_state: dict[str, Any], verbose: int = 0) -> 
 
   script_name = layer_scripts.get(layer_num)
   if not script_name:
-    return {"error": f"Unknown layer: {layer_num}"}
+    input_state.errors.append(f"Unknown layer: {layer_num}")
+    return input_state
 
   script_path = Path(__file__).parent / script_name
   if not script_path.exists():
-    return {"error": f"Layer script not found: {script_name}"}
+    input_state.errors.append(f"Layer script not found: {script_name}")
+    return input_state
 
   # Build command
   cmd = [sys.executable, str(script_path)]
@@ -56,33 +59,39 @@ def run_layer(layer_num: int, input_state: dict[str, Any], verbose: int = 0) -> 
     return {"error": f"Failed to run layer {layer_num}", "exception": str(e)}
 
   try:
-    stdout, _ = process.communicate(json.dumps(input_state))
+    stdout, _ = process.communicate(json.dumps(input_state.to_dict()))
   except Exception as e:
     logger.error("Layer %d execution failed: %s", layer_num, e)
-    return {"error": f"Layer {layer_num} execution error", "exception": str(e)}
+    error_state = input_state
+    error_state.errors.append(f"Layer {layer_num} execution error: {e}")
+    return error_state
 
   if process.returncode != 0:
     logger.error("Layer %d failed with exit code %d", layer_num, process.returncode)
-    return {"error": f"Layer {layer_num} failed", "exit_code": process.returncode}
+    error_state = input_state
+    error_state.errors.append(f"Layer {layer_num} failed (exit {process.returncode})")
+    return error_state
 
   try:
-    return json.loads(stdout)
+    return BootstrapState.from_dict(json.loads(stdout))
   except json.JSONDecodeError as e:
     logger.error("Failed to parse layer %d output: %s", layer_num, e)
-    return {"error": f"Invalid JSON from layer {layer_num}"}
+    error_state = input_state
+    error_state.errors.append(f"Invalid JSON from layer {layer_num}")
+    return error_state
 
 
-def print_summary(state: dict[str, Any]) -> None:
+def print_summary(state: BootstrapState) -> None:
   """Display bootstrap results summary."""
   print("\n" + "=" * 60)
   print("Bootstrap Summary")
   print("=" * 60)
 
-  if "layers" not in state:
+  if not state.layers:
     print("No layer information available")
     return
 
-  for layer_data in state["layers"]:
+  for layer_data in state.layers:
     layer_num = layer_data.get("layer", "?")
     layer_name = layer_data.get("name", "unknown")
     print(f"\nLayer {layer_num}: {layer_name}")
@@ -190,7 +199,9 @@ Examples:
   if args.input_state:
     try:
       with open(args.input_state) as f:
-        state = json.load(f)
+        state = BootstrapState.from_dict(json.load(f))
+      if state.platform is None:
+        state.platform = get_platform_handler()
       logger.info("Loaded initial state from %s", args.input_state)
     except Exception as e:
       logger.error("Failed to load input state: %s", e)
@@ -202,26 +213,26 @@ Examples:
     else:
       project_root = find_project_root()
 
-    state = {"project_root": str(project_root)}
+    state = BootstrapState(project_root=str(project_root))
+    state.platform = get_platform_handler()
     logger.debug("Using project root: %s", project_root)
 
   # Execute layers
   for layer_num in layers_to_run:
     state = run_layer(layer_num, state, args.verbose)
 
-    if "error" in state:
-      logger.error("Bootstrap failed at layer %d: %s", layer_num, state["error"])
+    if not state.can_proceed():
+      logger.error("Bootstrap failed at layer %d", layer_num)
       if args.output_state:
-        state["failed_at_layer"] = layer_num
         with open(args.output_state, "w") as f:
-          json.dump(state, f, indent=2)
+          json.dump(state.to_dict(), f, indent=2)
       return 1
 
   # Save final state
   if args.output_state:
     try:
       with open(args.output_state, "w") as f:
-        json.dump(state, f, indent=2)
+        json.dump(state.to_dict(), f, indent=2)
       logger.info("Saved final state to %s", args.output_state)
     except Exception as e:
       logger.error("Failed to save output state: %s", e)

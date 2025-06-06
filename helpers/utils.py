@@ -48,6 +48,12 @@ def run_command(cmd: str | Sequence[str], *, check: bool = True, **kwargs) -> su
   return subprocess.run(args, check=check, **kwargs)
 
 
+def check_command_exists(cmd: str) -> bool:
+  """Return ``True`` if *cmd* exists in ``PATH``."""
+  result = run_command(["which", cmd], check=False, capture_output=True, text=True)
+  return result.returncode == 0
+
+
 def add_common_args(parser: argparse.ArgumentParser) -> None:
   """Add common arguments to *parser* (logging + working directory)."""
   parser.add_argument(
@@ -68,7 +74,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
 
 def add_logging_args(parser: argparse.ArgumentParser) -> None:
   """Add common logging arguments to *parser*.
-  
+
   Deprecated: Use add_common_args() instead.
   """
   parser.add_argument(
@@ -100,19 +106,19 @@ def working_directory(path: Path | None) -> Generator[None, None, None]:
 def find_project_root(start: Path | None = None) -> Path:
   """Find project root by looking for pyproject.toml."""
   current = Path.cwd() if start is None else start
-  
+
   while current != current.parent:
     if (current / "pyproject.toml").exists():
       return current
     current = current.parent
-  
+
   # If no pyproject.toml found, return original directory
   return Path.cwd() if start is None else start
 
 
 def setup_working_directory(args: argparse.Namespace) -> contextlib.AbstractContextManager:
   """Setup working directory based on command arguments.
-  
+
   If args.directory is specified, change to that directory.
   Otherwise, change to project root (directory containing pyproject.toml).
   """

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-import helpers.python as hp
+import helpers.tools.python as hp
 
 
 def test_resolve_venv_path_default():

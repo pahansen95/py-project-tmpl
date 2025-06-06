@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .utils import add_common_args, configure_logging, logger, run_command, setup_working_directory
+from ..utils import add_common_args, configure_logging, logger, run_command, setup_working_directory
 
 
 BASE_VENV_DIR = Path(".venv")
@@ -61,18 +61,18 @@ def create_venv(args: argparse.Namespace) -> None:
   """Create a named virtual environment with optional parent symlink."""
   with setup_working_directory(args):
     venv_path = resolve_venv_path(args.name)
-    
+
     # Create parent symlink if requested
     if args.symlink_parent and BASE_VENV_DIR.exists() and not BASE_VENV_DIR.is_symlink():
       logger.error("Cannot create parent symlink: %s already exists", BASE_VENV_DIR)
       raise SystemExit(1)
-    
+
     if args.symlink_parent and not BASE_VENV_DIR.exists():
       target = Path(args.symlink_parent).expanduser().resolve()
       if not target.exists():
         logger.info("Creating parent venv directory at %s", target)
         target.mkdir(parents=True, mode=0o755)
-      
+
       logger.info("Symlinking %s -> %s", BASE_VENV_DIR, target)
       BASE_VENV_DIR.symlink_to(target)
 
@@ -95,18 +95,18 @@ def list_venvs(args: argparse.Namespace) -> None:
     if not BASE_VENV_DIR.exists():
       logger.info("No virtual environments found")
       return
-    
+
     # Check if base is a symlink
     if BASE_VENV_DIR.is_symlink():
       target = BASE_VENV_DIR.resolve()
       print(f"Venv parent: {BASE_VENV_DIR} -> {target}")
     else:
       print(f"Venv parent: {BASE_VENV_DIR}")
-    
+
     # List virtual environments
     if BASE_VENV_DIR.is_dir():
       venvs = []
-      
+
       # Check if BASE_VENV_DIR itself is a venv (has pyvenv.cfg)
       if (BASE_VENV_DIR / "pyvenv.cfg").exists():
         venvs.append("default")
@@ -115,7 +115,7 @@ def list_venvs(args: argparse.Namespace) -> None:
         for d in sorted(BASE_VENV_DIR.iterdir()):
           if d.is_dir() and (d / "pyvenv.cfg").exists():
             venvs.append(d.name)
-      
+
       if venvs:
         print("\nAvailable virtual environments:")
         for venv in venvs:
@@ -186,9 +186,9 @@ def main(argv: list[str] | None = None) -> None:
     metavar="PATH",
     help="Create parent .venv as symlink to PATH",
   )
-  
+
   # List venvs subcommand
-  list_parser = subparsers.add_parser("list", help="List virtual environments")
+  subparsers.add_parser("list", help="List virtual environments")
 
   # Install deps subcommand
   deps_parser = subparsers.add_parser("deps", help="Install dependency group")

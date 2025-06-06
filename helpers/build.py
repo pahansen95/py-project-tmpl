@@ -14,7 +14,7 @@ def main(argv: list[str] | None = None) -> None:
   args = parser.parse_args(argv)
 
   configure_logging(args.verbose, args.log_file)
-  
+
   with setup_working_directory(args):
     logger.debug("extra args: %s", args.extra)
     run_command(["uv", "build", *args.extra])

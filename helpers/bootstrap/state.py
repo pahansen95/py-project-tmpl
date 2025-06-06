@@ -28,6 +28,7 @@ class BootstrapState:
   warnings: List[str] = field(default_factory=list)
   errors: List[str] = field(default_factory=list)
   decisions: Dict[str, str] = field(default_factory=dict)
+  verifications: Dict[str, Any] = field(default_factory=dict)
 
   @classmethod
   def from_dict(cls, data: Dict[str, Any]) -> "BootstrapState":
@@ -46,3 +47,8 @@ class BootstrapState:
     """Record an installation or configuration decision."""
     self.decisions[component] = decision
     logger.debug("Decision recorded: %s -> %s", component, decision)
+
+  def record_verification(self, component: str, result: Dict[str, Any]) -> None:
+    """Store verification *result* for *component*."""
+    self.verifications[component] = result
+    logger.debug("Verification recorded: %s -> %s", component, result)

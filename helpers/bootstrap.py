@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import argparse
 
-from .utils import add_logging_args, configure_logging, logger, run_command
+from .utils import add_common_args, configure_logging, logger, run_command, setup_working_directory
 
 
 def main(argv: list[str] | None = None) -> None:
   """Install dependencies and setup pre-commit."""
   parser = argparse.ArgumentParser(prog="bootstrap")
-  add_logging_args(parser)
+  add_common_args(parser)
   parser.add_argument(
     "--ci",
     action="store_true",
@@ -19,10 +19,12 @@ def main(argv: list[str] | None = None) -> None:
   args = parser.parse_args(argv)
 
   configure_logging(args.verbose, args.log_file)
-  logger.debug("ci mode: %s", args.ci)
-  run_command("uv venv", check=False)
-  run_command("uv pip install -r uv.lock", check=False)
-  run_command("pre-commit install", check=False)
+  
+  with setup_working_directory(args):
+    logger.debug("ci mode: %s", args.ci)
+    run_command("uv venv", check=False)
+    run_command("uv pip install -r uv.lock", check=False)
+    run_command("pre-commit install", check=False)
 
 
 if __name__ == "__main__":

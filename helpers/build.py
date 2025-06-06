@@ -4,18 +4,20 @@ from __future__ import annotations
 
 import argparse
 
-from .utils import add_logging_args, configure_logging, logger, run_command
+from .utils import add_common_args, configure_logging, logger, run_command, setup_working_directory
 
 
 def main(argv: list[str] | None = None) -> None:
   parser = argparse.ArgumentParser(prog="build")
-  add_logging_args(parser)
-  parser.add_argument("extra", nargs=argparse.REMAINDER, help="Extra args for python -m build")
+  add_common_args(parser)
+  parser.add_argument("extra", nargs=argparse.REMAINDER, help="Extra args for uv build")
   args = parser.parse_args(argv)
 
   configure_logging(args.verbose, args.log_file)
-  logger.debug("extra args: %s", args.extra)
-  run_command(["python", "-m", "build", *args.extra])
+  
+  with setup_working_directory(args):
+    logger.debug("extra args: %s", args.extra)
+    run_command(["uv", "build", *args.extra])
 
 
 if __name__ == "__main__":

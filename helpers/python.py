@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .utils import add_logging_args, configure_logging, logger, run_command
+from .utils import add_common_args, configure_logging, logger, run_command, setup_working_directory
 
 
 BASE_VENV_DIR = Path(".venv")
@@ -27,85 +27,136 @@ def ensure_venv_exists(name: str) -> Path:
 
 def install_python(args: argparse.Namespace) -> None:
   """Install Python version from .python-version file."""
-  version_file = Path(".python-version")
-  if not version_file.exists():
-    logger.error(".python-version file not found")
-    raise SystemExit(1)
+  with setup_working_directory(args):
+    version_file = Path(".python-version")
+    if not version_file.exists():
+      logger.error(".python-version file not found")
+      raise SystemExit(1)
 
-  version = version_file.read_text().strip()
-  logger.debug("target version: %s", version)
+    version = version_file.read_text().strip()
+    logger.debug("target version: %s", version)
 
-  # Check if version is already installed
-  result = run_command(
-    ["pyenv", "versions", "--bare"],
-    capture_output=True,
-    text=True,
-    check=False,
-  )
+    # Check if version is already installed
+    result = run_command(
+      ["pyenv", "versions", "--bare"],
+      capture_output=True,
+      text=True,
+      check=False,
+    )
 
-  installed_versions = result.stdout.strip().split("\n") if result.stdout else []
-  version_installed = version in installed_versions
+    installed_versions = result.stdout.strip().split("\n") if result.stdout else []
+    version_installed = version in installed_versions
 
-  if version_installed and not args.force:
-    logger.info("Python %s is already installed", version)
-    return
+    if version_installed and not args.force:
+      logger.info("Python %s is already installed", version)
+      return
 
-  # Install the version
-  logger.info("Installing Python %s...", version)
-  run_command(["pyenv", "install", version] + (["--force"] if args.force else []))
-  logger.info("Python %s installed successfully", version)
+    # Install the version
+    logger.info("Installing Python %s...", version)
+    run_command(["pyenv", "install", version] + (["--force"] if args.force else []))
+    logger.info("Python %s installed successfully", version)
 
 
 def create_venv(args: argparse.Namespace) -> None:
-  """Create a named virtual environment."""
-  venv_path = resolve_venv_path(args.name)
+  """Create a named virtual environment with optional parent symlink."""
+  with setup_working_directory(args):
+    venv_path = resolve_venv_path(args.name)
+    
+    # Create parent symlink if requested
+    if args.symlink_parent and BASE_VENV_DIR.exists() and not BASE_VENV_DIR.is_symlink():
+      logger.error("Cannot create parent symlink: %s already exists", BASE_VENV_DIR)
+      raise SystemExit(1)
+    
+    if args.symlink_parent and not BASE_VENV_DIR.exists():
+      target = Path(args.symlink_parent).expanduser().resolve()
+      if not target.exists():
+        logger.info("Creating parent venv directory at %s", target)
+        target.mkdir(parents=True, mode=0o755)
+      
+      logger.info("Symlinking %s -> %s", BASE_VENV_DIR, target)
+      BASE_VENV_DIR.symlink_to(target)
 
-  if venv_path.exists() and not args.force:
-    logger.info("Virtual environment '%s' already exists", args.name)
-    return
+    if venv_path.exists() and not args.force:
+      logger.info("Virtual environment '%s' already exists", args.name)
+      return
 
-  logger.info("Creating virtual environment '%s'...", args.name)
-  cmd = ["uv", "venv", str(venv_path)]
-  if args.force:
-    cmd.append("--force")
+    logger.info("Creating virtual environment '%s'...", args.name)
+    cmd = ["uv", "venv", str(venv_path)]
+    if args.force:
+      cmd.append("--force")
 
-  run_command(cmd)
-  logger.info("Virtual environment '%s' created at %s", args.name, venv_path)
+    run_command(cmd)
+    logger.info("Virtual environment '%s' created at %s", args.name, venv_path)
+
+
+def list_venvs(args: argparse.Namespace) -> None:
+  """List all virtual environments."""
+  with setup_working_directory(args):
+    if not BASE_VENV_DIR.exists():
+      logger.info("No virtual environments found")
+      return
+    
+    # Check if base is a symlink
+    if BASE_VENV_DIR.is_symlink():
+      target = BASE_VENV_DIR.resolve()
+      print(f"Venv parent: {BASE_VENV_DIR} -> {target}")
+    else:
+      print(f"Venv parent: {BASE_VENV_DIR}")
+    
+    # List virtual environments
+    if BASE_VENV_DIR.is_dir():
+      venvs = []
+      
+      # Check if BASE_VENV_DIR itself is a venv (has pyvenv.cfg)
+      if (BASE_VENV_DIR / "pyvenv.cfg").exists():
+        venvs.append("default")
+      else:
+        # List all subdirectories that are venvs
+        for d in sorted(BASE_VENV_DIR.iterdir()):
+          if d.is_dir() and (d / "pyvenv.cfg").exists():
+            venvs.append(d.name)
+      
+      if venvs:
+        print("\nAvailable virtual environments:")
+        for venv in venvs:
+          print(f"  - {venv}")
 
 
 def install_deps(args: argparse.Namespace) -> None:
   """Install dependency group in virtual environment."""
-  venv_path = ensure_venv_exists(args.venv)
+  with setup_working_directory(args):
+    venv_path = ensure_venv_exists(args.venv)
 
-  logger.info("Installing '%s' dependencies in '%s'...", args.group, args.venv)
+    logger.info("Installing '%s' dependencies in '%s'...", args.group, args.venv)
 
-  # Build command based on group
-  if args.group == "base":
-    cmd = ["uv", "pip", "install", "-r", "uv.lock"]
-  else:
-    cmd = ["uv", "pip", "install", "--group", args.group]
+    # Build command based on group
+    if args.group == "base":
+      cmd = ["uv", "pip", "install", "-r", "uv.lock"]
+    else:
+      cmd = ["uv", "pip", "install", "--group", args.group]
 
-  # Add virtual environment path
-  cmd.extend(["--python", str(venv_path)])
+    # Add virtual environment path
+    cmd.extend(["--python", str(venv_path)])
 
-  run_command(cmd)
-  logger.info("Dependencies installed successfully")
+    run_command(cmd)
+    logger.info("Dependencies installed successfully")
 
 
 def run_in_venv(args: argparse.Namespace) -> None:
   """Run command in virtual environment."""
-  venv_path = ensure_venv_exists(args.venv)
+  with setup_working_directory(args):
+    venv_path = ensure_venv_exists(args.venv)
 
-  logger.debug("Running in venv '%s': %s", args.venv, args.command)
+    logger.debug("Running in venv '%s': %s", args.venv, args.command)
 
-  # Use uv run with the specified venv
-  cmd = ["uv", "run", "--python", str(venv_path), *args.command]
-  run_command(cmd)
+    # Use uv run with the specified venv
+    cmd = ["uv", "run", "--python", str(venv_path), *args.command]
+    run_command(cmd)
 
 
 def main(argv: list[str] | None = None) -> None:
-  parser = argparse.ArgumentParser(prog="install_python")
-  add_logging_args(parser)
+  parser = argparse.ArgumentParser(prog="python")
+  add_common_args(parser)
 
   subparsers = parser.add_subparsers(dest="action", required=True)
 
@@ -130,6 +181,14 @@ def main(argv: list[str] | None = None) -> None:
     action="store_true",
     help="Recreate if exists",
   )
+  venv_parser.add_argument(
+    "--symlink-parent",
+    metavar="PATH",
+    help="Create parent .venv as symlink to PATH",
+  )
+  
+  # List venvs subcommand
+  list_parser = subparsers.add_parser("list", help="List virtual environments")
 
   # Install deps subcommand
   deps_parser = subparsers.add_parser("deps", help="Install dependency group")
@@ -165,6 +224,8 @@ def main(argv: list[str] | None = None) -> None:
     install_python(args)
   elif args.action == "venv":
     create_venv(args)
+  elif args.action == "list":
+    list_venvs(args)
   elif args.action == "deps":
     install_deps(args)
   elif args.action == "run":

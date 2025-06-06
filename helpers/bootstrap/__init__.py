@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .state import BootstrapState
+
 __version__ = "1.0.0"
 
 # Layer definitions
@@ -12,7 +14,5 @@ LAYERS = {
   3: "Project Environment (venv, dependencies)",
   4: "Developer Experience (git hooks, IDE)",
 }
-
-from .state import BootstrapState
 
 __all__ = ["LAYERS", "__version__", "BootstrapState"]

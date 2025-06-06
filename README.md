@@ -6,7 +6,7 @@ A sample Python project template based on **pyenv**, **uv**, and helper scripts.
 
 ```bash
 git clone <repo> && cd py-project-tmpl
-python helpers/bootstrap.py          # setup venv and hooks
+python -m helpers.bootstrap          # setup venv and hooks
 python helpers/run.py --help         # list helper commands
 ```
 

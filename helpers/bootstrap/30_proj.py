@@ -9,9 +9,11 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
+import shutil
 from typing import Any
 
 from .state import BootstrapState
+from .verify import verify_venv
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +41,17 @@ def create_virtual_environment(project_root: Path, python_version: str | None = 
   venv_path = project_root / ".venv"
 
   try:
-    # Check if venv already exists
-    if venv_path.exists() and (venv_path / "pyvenv.cfg").exists():
-      logger.info("Virtual environment already exists at %s", venv_path)
-      result["venv"]["created"] = True
-      result["venv"]["path"] = str(venv_path)
-      return result
+    # Check if venv already exists and is valid
+    if venv_path.exists():
+      verification = verify_venv(venv_path)
+      if verification["valid"]:
+        logger.info("Valid virtual environment exists at %s", venv_path)
+        result["venv"]["created"] = True
+        result["venv"]["path"] = str(venv_path)
+        return result
+      if verification["corrupt"]:
+        logger.warning("Invalid venv detected, recreating...")
+        shutil.rmtree(venv_path)
 
     # Create venv with uv
     cmd = ["uv", "venv", str(venv_path)]

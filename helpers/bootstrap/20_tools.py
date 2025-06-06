@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from .state import BootstrapState
+from .verify import verify_tool
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +45,12 @@ def install_uv() -> dict[str, Any]:
   """Install uv package manager."""
   result = {"uv": {"installed": False, "version": None, "error": None}}
 
-  # Check if already installed
-  if check_command_exists("uv"):
-    version_result = run_command(["uv", "--version"], check=False)
-    if version_result.returncode == 0:
-      result["uv"]["installed"] = True
-      result["uv"]["version"] = version_result.stdout.strip()
-      logger.info("uv already installed: %s", result["uv"]["version"])
-      return result
+  existing = verify_tool("uv")
+  if existing["installed"]:
+    result["uv"]["installed"] = True
+    result["uv"]["version"] = existing["version"]
+    logger.info("uv already installed: %s", existing["version"])
+    return result
 
   # Install uv
   try:
@@ -78,11 +77,11 @@ def install_uv() -> dict[str, Any]:
         raise subprocess.CalledProcessError(process.returncode, "uv installer", stderr)
 
     # Verify installation
-    if check_command_exists("uv"):
-      version_result = run_command(["uv", "--version"], check=False)
+    verification = verify_tool("uv")
+    if verification["installed"]:
       result["uv"]["installed"] = True
-      result["uv"]["version"] = version_result.stdout.strip()
-      logger.info("uv installed successfully: %s", result["uv"]["version"])
+      result["uv"]["version"] = verification["version"]
+      logger.info("uv installed successfully: %s", verification["version"])
     else:
       result["uv"]["error"] = "uv not found after installation"
       logger.error("uv installation verification failed")
@@ -98,14 +97,12 @@ def install_pyenv() -> dict[str, Any]:
   """Install pyenv for Python version management."""
   result = {"pyenv": {"installed": False, "version": None, "error": None}}
 
-  # Check if already installed
-  if check_command_exists("pyenv"):
-    version_result = run_command(["pyenv", "--version"], check=False)
-    if version_result.returncode == 0:
-      result["pyenv"]["installed"] = True
-      result["pyenv"]["version"] = version_result.stdout.strip()
-      logger.info("pyenv already installed: %s", result["pyenv"]["version"])
-      return result
+  existing = verify_tool("pyenv")
+  if existing["installed"]:
+    result["pyenv"]["installed"] = True
+    result["pyenv"]["version"] = existing["version"]
+    logger.info("pyenv already installed: %s", existing["version"])
+    return result
 
   # Platform-specific installation
   system = platform.system()
@@ -155,6 +152,16 @@ def install_pyenv() -> dict[str, Any]:
   except Exception as e:
     result["pyenv"]["error"] = str(e)
     logger.error("Failed to install pyenv: %s", e)
+
+  verification = verify_tool("pyenv")
+  if verification["installed"]:
+    result["pyenv"]["installed"] = True
+    if result["pyenv"].get("version") is None:
+      result["pyenv"]["version"] = verification["version"]
+  else:
+    if result["pyenv"].get("error") is None:
+      result["pyenv"]["error"] = "pyenv not found after installation"
+      logger.error("pyenv installation verification failed")
 
   return result
 

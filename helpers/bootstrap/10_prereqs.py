@@ -358,6 +358,11 @@ def check_prerequisites() -> dict[str, bool]:
   return checks
 
 
+def verify_prerequisites() -> dict[str, Any]:
+  """Verify prerequisite availability."""
+  return {"checks": check_prerequisites()}
+
+
 def main() -> None:
   """Probe prerequisites layer information."""
   parser = argparse.ArgumentParser(description="Layer 1: Prerequisites Probe")
@@ -400,6 +405,7 @@ def main() -> None:
   prerequisite_checks = check_prerequisites()
   state.prerequisites_met = all(prerequisite_checks.values())
   state.prerequisite_checks = prerequisite_checks
+  state.record_verification("prerequisites", verify_prerequisites())
 
   state.layer = 1
   state.layers.append({"layer": 1, "name": "prerequisites", "results": layer_results})

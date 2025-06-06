@@ -12,6 +12,7 @@ from typing import Any
 
 from .state import BootstrapState
 from .platform import get_platform_handler
+from .verify import verify_tool
 from ..utils import configure_logging, run_command, check_command_exists
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,30 @@ def get_project_python_version(project_root: Path) -> str | None:
   return None
 
 
+def verify_uv() -> dict[str, Any]:
+  """Verify uv installation."""
+  return {"uv": verify_tool("uv")}
+
+
+def verify_pyenv() -> dict[str, Any]:
+  """Verify pyenv installation."""
+  return {"pyenv": verify_tool("pyenv")}
+
+
+def verify_python_version(version: str) -> dict[str, Any]:
+  """Check if *version* of Python is available."""
+  for cmd in [f"python{version}", "python3", "python"]:
+    if check_command_exists(cmd):
+      out = run_command([cmd, "--version"], check=False, capture_output=True, text=True)
+      if out.returncode == 0 and version in out.stdout:
+        return {"python": {"version": version, "available": True}}
+  if check_command_exists("pyenv"):
+    versions_result = run_command(["pyenv", "versions", "--bare"], check=False, capture_output=True, text=True)
+    if versions_result.returncode == 0 and version in versions_result.stdout.splitlines():
+      return {"python": {"version": version, "available": True}}
+  return {"python": {"version": version, "available": False}}
+
+
 def main() -> None:
   """Install and configure managed tools."""
   parser = argparse.ArgumentParser(description="Layer 2: Managed Tools")
@@ -116,27 +141,43 @@ def main() -> None:
 
   layer_results: dict[str, Any] = {}
 
-  # Install uv
   if not args.skip_uv:
-    uv_res = install_uv(state.platform)
-    layer_results.update(uv_res)
-    if uv_res.get("uv", {}).get("installed"):
-      state.installed_tools["uv"] = uv_res["uv"]
+    if verify_uv()["uv"]["installed"]:
+      state.record_decision("uv", "reuse")
+    else:
+      uv_res = install_uv(state.platform)
+      layer_results.update(uv_res)
+      state.record_decision("uv", "install")
+    uv_verify = verify_uv()
+    state.record_verification("uv", uv_verify)
+    if uv_verify["uv"]["installed"]:
+      state.installed_tools["uv"] = uv_verify["uv"]
 
   # Install pyenv (optional, not critical)
   if not args.skip_pyenv:
-    pyenv_res = install_pyenv(state.platform)
-    layer_results.update(pyenv_res)
-    if pyenv_res.get("pyenv", {}).get("installed"):
-      state.installed_tools["pyenv"] = pyenv_res["pyenv"]
+    if verify_pyenv()["pyenv"]["installed"]:
+      state.record_decision("pyenv", "reuse")
+    else:
+      pyenv_res = install_pyenv(state.platform)
+      layer_results.update(pyenv_res)
+      state.record_decision("pyenv", "install")
+    pyenv_verify = verify_pyenv()
+    state.record_verification("pyenv", pyenv_verify)
+    if pyenv_verify["pyenv"]["installed"]:
+      state.installed_tools["pyenv"] = pyenv_verify["pyenv"]
 
   # Ensure Python version
   if not args.skip_python:
     python_version = args.python or get_project_python_version(project_root) or "3.13"
-    py_res = ensure_python_version(python_version)
-    layer_results.update(py_res)
-    state.installed_tools["python"] = py_res.get("python", {})
-    state.record_decision("python", python_version)
+    if verify_python_version(python_version)["python"]["available"]:
+      state.record_decision("python", "reuse")
+    else:
+      py_res = ensure_python_version(python_version)
+      layer_results.update(py_res)
+      state.record_decision("python", "install")
+    py_verify = verify_python_version(python_version)
+    state.record_verification("python", py_verify)
+    state.installed_tools["python"] = {"version": python_version, "installed": py_verify["python"]["available"]}
 
   if not args.skip_uv and not state.installed_tools.get("uv", {}).get("installed"):
     logger.error("Critical: uv installation failed")

@@ -28,3 +28,9 @@ def test_record_decision():
   state = BootstrapState(project_root="/tmp")
   state.record_decision("python", "use_existing")
   assert state.decisions["python"] == "use_existing"
+
+
+def test_record_verification():
+  state = BootstrapState(project_root="/tmp")
+  state.record_verification("python", {"installed": True})
+  assert state.verifications["python"]["installed"]

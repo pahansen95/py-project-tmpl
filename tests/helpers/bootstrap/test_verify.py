@@ -1,4 +1,7 @@
 from helpers.bootstrap.verify import verify_tool, verify_venv
+import importlib
+
+verify_pre_commit_hooks = importlib.import_module("helpers.bootstrap.40_dx").verify_pre_commit_hooks
 
 
 def test_verify_tool_python():
@@ -30,3 +33,11 @@ def test_verify_venv_corrupt(tmp_path):
   res = verify_venv(venv_path)
   assert not res["valid"]
   assert res["corrupt"]
+
+
+def test_verify_pre_commit_hooks(tmp_path):
+  hooks = tmp_path / ".git" / "hooks"
+  hooks.mkdir(parents=True)
+  (hooks / "pre-commit").write_text("echo")
+  res = verify_pre_commit_hooks(tmp_path)
+  assert res["pre_commit"]["installed"]

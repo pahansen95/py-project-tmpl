@@ -159,6 +159,11 @@ def probe_environment_variables() -> dict[str, Any]:
   return result
 
 
+def verify_foundation(checks: dict[str, bool]) -> dict[str, Any]:
+  """Return whether all foundation checks passed."""
+  return {"foundation_ready": all(checks.values())}
+
+
 def probe_system_resources() -> dict[str, Any]:
   """Probe system resource availability."""
   result = {
@@ -264,6 +269,7 @@ def main() -> None:
   # Store readiness indicators as dynamic fields for compatibility
   state.foundation_ready = all(checks.values())
   state.foundation_checks = checks
+  state.record_verification("foundation", verify_foundation(checks))
 
   state.layer = 0
   state.layers.append({"layer": 0, "name": "foundation", "results": layer_results})

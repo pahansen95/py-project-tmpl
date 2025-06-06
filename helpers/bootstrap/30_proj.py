@@ -14,6 +14,7 @@ from typing import Any
 
 from .state import BootstrapState
 from .verify import verify_venv
+from ..tools import python as pytools
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,6 @@ def create_virtual_environment(project_root: Path, python_version: str | None = 
   venv_path = project_root / ".venv"
 
   try:
-    # Check if venv already exists and is valid
     if venv_path.exists():
       verification = verify_venv(venv_path)
       if verification["valid"]:
@@ -53,12 +53,15 @@ def create_virtual_environment(project_root: Path, python_version: str | None = 
         logger.warning("Invalid venv detected, recreating...")
         shutil.rmtree(venv_path)
 
-    # Create venv with uv
-    cmd = ["uv", "venv", str(venv_path)]
-    if python_version:
-      cmd.extend(["--python", python_version])
-
-    run_command(cmd, check=True)
+    args = argparse.Namespace(
+      name="default",
+      force=False,
+      symlink_parent=None,
+      directory=project_root,
+      verbose=0,
+      log_file=None,
+    )
+    pytools.create_venv(args)
     result["venv"]["created"] = True
     result["venv"]["path"] = str(venv_path)
     logger.info("Created virtual environment at %s", venv_path)
@@ -78,8 +81,8 @@ def install_dependencies(project_root: Path, venv_path: Path) -> dict[str, Any]:
   lock_file = project_root / "uv.lock"
   if lock_file.exists():
     try:
-      cmd = ["uv", "pip", "install", "-r", str(lock_file), "--python", str(venv_path)]
-      run_command(cmd, check=True)
+      args = argparse.Namespace(group="base", venv="default", directory=project_root, verbose=0, log_file=None)
+      pytools.install_deps(args)
       result["dependencies"]["base"]["installed"] = True
       logger.info("Base dependencies installed successfully")
     except subprocess.CalledProcessError as e:
@@ -91,12 +94,11 @@ def install_dependencies(project_root: Path, venv_path: Path) -> dict[str, Any]:
 
   # Install dev dependencies
   try:
-    cmd = ["uv", "pip", "install", "--group", "dev", "--python", str(venv_path)]
-    run_command(cmd, check=True)
+    args = argparse.Namespace(group="dev", venv="default", directory=project_root, verbose=0, log_file=None)
+    pytools.install_deps(args)
     result["dependencies"]["dev"]["installed"] = True
     logger.info("Development dependencies installed successfully")
   except subprocess.CalledProcessError as e:
-    # This might fail if no dev group exists, which is okay
     logger.debug("Failed to install dev dependencies (may not exist): %s", e)
     result["dependencies"]["dev"]["error"] = "No dev group or installation failed"
 

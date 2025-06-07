@@ -22,6 +22,9 @@ dev = [
     "pytest-mock>=3.14.1",
     "ruff>=0.11.11",
 ]
+docs = [
+    "mkdocs>=1.5.3",
+]
 
 [tool.ruff]
 line-length = 120

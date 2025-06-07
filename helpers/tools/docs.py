@@ -2,6 +2,8 @@
 
 import argparse
 
+VENV_WANT = "docs"
+
 from ..utils import add_common_args, configure_logging, logger, run_command, setup_working_directory
 
 

@@ -88,7 +88,17 @@ def verify_helper_scripts(project_root: Path) -> dict[str, Any]:
   result = {"helpers": {"available": [], "missing": []}}
 
   helpers_dir = project_root / "helpers"
-  expected_helpers = ["bootstrap.py", "build.py", "test.py", "format.py", "lint.py", "docs.py", "python.py", "cache.py"]
+  expected_helpers = [
+    "bootstrap.py",
+    "tool",
+    "tools/build.py",
+    "test.py",
+    "format.py",
+    "lint.py",
+    "docs.py",
+    "python.py",
+    "cache.py",
+  ]
 
   for helper in expected_helpers:
     helper_path = helpers_dir / helper

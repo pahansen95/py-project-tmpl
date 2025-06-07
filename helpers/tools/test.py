@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 
+VENV_WANT = "test"
+
 from ..utils import add_common_args, configure_logging, logger, run_command, setup_working_directory
 
 

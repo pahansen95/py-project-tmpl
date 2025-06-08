@@ -4,6 +4,19 @@ A sample Python project template based on **pyenv**, **uv**, and helper scripts.
 
 ## Quickstart
 
+### `quickstart.sh`
+
+Use the quickstart script to clone this template into a new directory,
+wipe its history, and initialise a fresh repository. Optionally provide
+`-u` to set the `origin` remote.
+
+```bash
+curl -L https://raw.githubusercontent.com/pahansen95/py-project-tmpl/trunk/quickstart.sh \
+  | bash -- -C ./project/path -u git@github.com:username/project.git
+```
+
+### Manual setup
+
 ```bash
 git clone <repo> && cd py-project-tmpl
 python -m helpers.bootstrap          # setup dev/test/docs venvs and hooks

@@ -39,11 +39,11 @@ environment and install the remaining tools.
 
 ## Helpers
 
-- `python -m helpers.tools.build` – build distribution packages
-- `python -m helpers.tools.test` – run pytest
-- `python -m helpers.tools.format` – format via Ruff
-- `python -m helpers.tools.lint` – lint via Ruff
-- `python -m helpers.tools.docs [build|serve]` – MkDocs commands
+- `python -m helpers.tools build` – build distribution packages
+- `python -m helpers.tools test` – run pytest
+- `python -m helpers.tools format` – format via Ruff
+- `python -m helpers.tools lint` – lint via Ruff
+- `python -m helpers.tools docs [build|serve]` – MkDocs commands
 
 Alternatively, use the `helpers/tool` wrapper which activates the required
 virtual environment automatically:

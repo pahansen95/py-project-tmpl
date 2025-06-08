@@ -48,4 +48,4 @@ if [ -z "${VIRTUAL_ENV-}" ]; then
 fi
 
 export PYTHONPATH="$root${PYTHONPATH+:$PYTHONPATH}"
-exec python -m "helpers.tools.$tool" "$@"
+exec python -m helpers.tools "$tool" "$@"

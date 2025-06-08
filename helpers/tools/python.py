@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+VENV_WANT = "dev"
+
 from ..utils import add_common_args, configure_logging, logger, run_command, setup_working_directory
 
 
@@ -194,7 +196,7 @@ def main(argv: list[str] | None = None) -> None:
   deps_parser = subparsers.add_parser("deps", help="Install dependency group")
   deps_parser.add_argument(
     "group",
-    choices=["base", "dev", "build"],
+    choices=["base", "dev", "build", "docs"],
     help="Dependency group to install",
   )
   deps_parser.add_argument(

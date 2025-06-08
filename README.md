@@ -6,9 +6,15 @@ A sample Python project template based on **pyenv**, **uv**, and helper scripts.
 
 ```bash
 git clone <repo> && cd py-project-tmpl
-python -m helpers.bootstrap          # setup venv and hooks
-python helpers/run.py --help         # list helper commands
+python -m helpers.bootstrap          # setup dev/test/docs venvs and hooks
+helpers/tool --help                  # list helper commands
 ```
+
+Bootstrap creates three virtual environments under `.venv/`:
+
+- `dev`  – all dependencies for development (stored in `.venv/`)
+- `test` – project and test dependencies (stored in `.venv/test`)
+- `docs` – documentation build/serve dependencies (stored in `.venv/docs`)
 
 ## Prerequisites
 
@@ -33,11 +39,18 @@ environment and install the remaining tools.
 
 ## Helpers
 
-- `python helpers/build.py` – build distribution packages
+- `python -m helpers.tools.build` – build distribution packages
 - `python -m helpers.tools.test` – run pytest
 - `python -m helpers.tools.format` – format via Ruff
 - `python -m helpers.tools.lint` – lint via Ruff
 - `python -m helpers.tools.docs [build|serve]` – MkDocs commands
+
+Alternatively, use the `helpers/tool` wrapper which activates the required
+virtual environment automatically:
+
+```bash
+helpers/tool <tool> [args]
+```
 
 All helpers support `-v/--verbose` to increase logging detail and
 `--log-file` to duplicate logs to a file.
@@ -50,4 +63,5 @@ Development requirements live in optional groups:
 
 - `build` – wheel/sdist build tools
 - `dev` – linting, testing, and formatting tools
+- `docs` – MkDocs and related tooling
 

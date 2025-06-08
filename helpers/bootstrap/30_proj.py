@@ -20,26 +20,27 @@ from ..utils import configure_logging, run_command
 logger = logging.getLogger(__name__)
 
 
-def create_virtual_environment(project_root: Path, python_version: str | None = None) -> dict[str, Any]:
-  """Create project virtual environment using uv."""
-  result = {"venv": {"created": False, "path": None, "error": None}}
+def create_virtual_environment(project_root: Path, name: str, python_version: str | None = None) -> dict[str, Any]:
+  """Create virtual environment *name* using uv."""
+  result = {name: {"created": False, "path": None, "error": None}}
 
-  venv_path = project_root / ".venv"
+  target = "default" if name == "dev" else name
+  venv_path = project_root / pytools.resolve_venv_path(target)
 
   try:
     if venv_path.exists():
       verification = verify_venv(venv_path)
       if verification["valid"]:
         logger.info("Valid virtual environment exists at %s", venv_path)
-        result["venv"]["created"] = True
-        result["venv"]["path"] = str(venv_path)
+        result[name]["created"] = True
+        result[name]["path"] = str(venv_path)
         return result
       if verification["corrupt"]:
         logger.warning("Invalid venv detected, recreating...")
         shutil.rmtree(venv_path)
 
     args = argparse.Namespace(
-      name="default",
+      name=target,
       force=False,
       symlink_parent=None,
       directory=project_root,
@@ -47,45 +48,40 @@ def create_virtual_environment(project_root: Path, python_version: str | None = 
       log_file=None,
     )
     pytools.create_venv(args)
-    result["venv"]["created"] = True
-    result["venv"]["path"] = str(venv_path)
+    result[name]["created"] = True
+    result[name]["path"] = str(venv_path)
     logger.info("Created virtual environment at %s", venv_path)
 
   except subprocess.CalledProcessError as e:
-    result["venv"]["error"] = f"Failed to create venv: {e}"
+    result[name]["error"] = f"Failed to create venv: {e}"
     logger.error("Virtual environment creation failed: %s", e)
 
   return result
 
 
-def install_dependencies(project_root: Path, venv_path: Path) -> dict[str, Any]:
-  """Install project dependencies from uv.lock."""
-  result = {"dependencies": {"base": {"installed": False, "error": None}, "dev": {"installed": False, "error": None}}}
+def install_dependencies(project_root: Path, name: str, groups: list[str]) -> dict[str, Any]:
+  """Install dependency *groups* in virtual environment *name*."""
+  result = {"dependencies": {name: {}}}
 
-  # Install base dependencies
-  lock_file = project_root / "uv.lock"
-  if lock_file.exists():
+  # Install each dependency group
+  for group in groups:
+    group_result = {"installed": False, "error": None}
     try:
-      args = argparse.Namespace(group="base", venv="default", directory=project_root, verbose=0, log_file=None)
+      args = argparse.Namespace(
+        group=group,
+        venv="default" if name == "dev" else name,
+        directory=project_root,
+        verbose=0,
+        log_file=None,
+      )
       pytools.install_deps(args)
-      result["dependencies"]["base"]["installed"] = True
-      logger.info("Base dependencies installed successfully")
+      group_result["installed"] = True
+      logger.info("Installed '%s' in %s", group, name)
     except subprocess.CalledProcessError as e:
-      result["dependencies"]["base"]["error"] = str(e)
-      logger.error("Failed to install base dependencies: %s", e)
-  else:
-    result["dependencies"]["base"]["error"] = "uv.lock not found"
-    logger.warning("No uv.lock file found, skipping base dependency installation")
+      logger.debug("Failed to install %s in %s: %s", group, name, e)
+      group_result["error"] = str(e)
 
-  # Install dev dependencies
-  try:
-    args = argparse.Namespace(group="dev", venv="default", directory=project_root, verbose=0, log_file=None)
-    pytools.install_deps(args)
-    result["dependencies"]["dev"]["installed"] = True
-    logger.info("Development dependencies installed successfully")
-  except subprocess.CalledProcessError as e:
-    logger.debug("Failed to install dev dependencies (may not exist): %s", e)
-    result["dependencies"]["dev"]["error"] = "No dev group or installation failed"
+    result["dependencies"][name][group] = group_result
 
   return result
 
@@ -141,10 +137,10 @@ def verify_dev_tools(venv_path: Path) -> dict[str, Any]:
   }
 
 
-def verify_dependencies_accessible(venv_path: Path) -> dict[str, Any]:
+def verify_dependencies_accessible(name: str, venv_path: Path) -> dict[str, Any]:
   """Check that pip is functional inside the venv."""
   res = run_command(["uv", "pip", "list", "--python", str(venv_path)], check=False)
-  return {"dependencies": {"accessible": res.returncode == 0}}
+  return {"dependencies": {name: {"accessible": res.returncode == 0}}}
 
 
 def main() -> None:
@@ -183,31 +179,38 @@ def main() -> None:
 
   layer_results.update(verify_project_structure(project_root))
 
-  venv_path = project_root / ".venv"
-  initial_venv = verify_venv(venv_path)
-  state.record_verification("venv", initial_venv)
-  if initial_venv["valid"]:
-    state.record_decision("venv", "reuse")
-  else:
-    venv_result = create_virtual_environment(project_root, python_version)
-    layer_results.update(venv_result)
-    state.record_decision("venv", "create" if venv_result["venv"]["created"] else "fail")
-    state.record_verification("venv", verify_venv(venv_path))
+  venv_configs = {
+    "dev": {"groups": ["base", "dev", "build", "docs"], "tools": True},
+    "test": {"groups": ["base", "dev"], "tools": False},
+    "docs": {"groups": ["base", "docs"], "tools": False},
+  }
 
-  if (venv_path / "bin/python").exists():
-    # Install dependencies
-    if not args.skip_deps:
-      layer_results.update(install_dependencies(project_root, venv_path))
-      dep_verify = verify_dependencies_accessible(venv_path)
-      state.record_verification("dependencies", dep_verify)
-
-    # Install development tools
-    if not args.skip_tools:
-      layer_results.update(install_development_tools(venv_path))
-      state.record_decision("dev_tools", "install")
-      state.record_verification("dev_tools", verify_dev_tools(venv_path))
+  for name, cfg in venv_configs.items():
+    target = project_root / pytools.resolve_venv_path("default" if name == "dev" else name)
+    initial = verify_venv(target)
+    state.record_verification(f"venv_{name}", initial)
+    if initial["valid"]:
+      state.record_decision(f"venv_{name}", "reuse")
     else:
-      state.record_decision("dev_tools", "skip")
+      venv_res = create_virtual_environment(project_root, name, python_version)
+      layer_results.setdefault("venvs", {}).update(venv_res)
+      state.record_decision(f"venv_{name}", "create" if venv_res[name]["created"] else "fail")
+      state.record_verification(f"venv_{name}", verify_venv(target))
+
+    if (target / "bin/python").exists():
+      if not args.skip_deps:
+        dep_res = install_dependencies(project_root, name, cfg["groups"])
+        layer_results.setdefault("dependencies", {}).update(dep_res["dependencies"])
+        dep_verify = verify_dependencies_accessible(name, target)
+        state.record_verification(f"deps_{name}", dep_verify)
+
+      if cfg["tools"] and not args.skip_tools:
+        tools_res = install_development_tools(target)
+        layer_results.setdefault("dev_tools", {}).update(tools_res["dev_tools"])
+        state.record_decision(f"dev_tools_{name}", "install")
+        state.record_verification(f"dev_tools_{name}", verify_dev_tools(target))
+      elif cfg["tools"]:
+        state.record_decision(f"dev_tools_{name}", "skip")
 
   # Pass through previous layer data
   state.layer = 3

@@ -4,7 +4,15 @@ from __future__ import annotations
 
 import argparse
 
-from .utils import add_common_args, configure_logging, logger, run_command, setup_working_directory
+VENV_WANT = "dev"
+
+from ..utils import (
+  add_common_args,
+  configure_logging,
+  logger,
+  run_command,
+  setup_working_directory,
+)
 
 
 def main(argv: list[str] | None = None) -> None:

@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+VENV_WANT = "dev"
+
 from ..utils import add_common_args, configure_logging, logger, setup_working_directory
 
 

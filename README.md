@@ -7,12 +7,13 @@ A sample Python project template based on **pyenv**, **uv**, and helper scripts.
 ### `quickstart.sh`
 
 Use the quickstart script to clone this template into a new directory,
-wipe its history, and initialise a fresh repository. Optionally provide
-`-u` to set the `origin` remote.
+wipe its history, and initialise a fresh repository. Provide `-u` to set
+the `origin` remote and `--push` to immediately push the initial
+commit.
 
 ```bash
 curl -L https://raw.githubusercontent.com/pahansen95/py-project-tmpl/trunk/quickstart.sh \
-  | bash -- -C ./project/path -u git@github.com:username/project.git
+  | bash -- -C ./project/path -u git@github.com:username/project.git --push
 ```
 
 ### Manual setup

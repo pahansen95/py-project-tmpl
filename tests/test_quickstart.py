@@ -8,12 +8,14 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "quickstart.sh"
 
 
-def run_quickstart(dest: Path, remote: str | None = None) -> None:
+def run_quickstart(dest: Path, remote: str | None = None, push: bool = False) -> None:
   env = os.environ.copy()
   env["QUICKSTART_TEMPLATE_REPO"] = str(ROOT)
   cmd = [str(SCRIPT), "-C", str(dest)]
   if remote:
     cmd += ["-u", remote]
+  if push:
+    cmd.append("--push")
   subprocess.run(cmd, check=True, env=env)
 
 
@@ -38,3 +40,17 @@ def test_quickstart_configures_remote(tmp_path: Path) -> None:
     check=True,
   )
   assert result.stdout.strip() == remote
+
+
+def test_quickstart_pushes_to_remote(tmp_path: Path) -> None:
+  project_dir = tmp_path / "proj"
+  remote_repo = tmp_path / "remote.git"
+  subprocess.run(["git", "init", "--bare", str(remote_repo)], check=True)
+  run_quickstart(project_dir, remote=str(remote_repo), push=True)
+  result = subprocess.run(
+    ["git", "--git-dir", str(remote_repo), "rev-list", "--count", "HEAD"],
+    capture_output=True,
+    text=True,
+    check=True,
+  )
+  assert result.stdout.strip() == "1"

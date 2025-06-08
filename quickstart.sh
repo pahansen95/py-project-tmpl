@@ -2,23 +2,44 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $(basename "$0") [-C DIR] [-u REMOTE]" >&2
-  echo "  -C DIR   Directory for new project (default: CWD)" >&2
-  echo "  -u URL   Configure git remote \"origin\"" >&2
+  echo "Usage: $(basename "$0") [-C DIR] [-u REMOTE] [--push]" >&2
+  echo "  -C DIR    Directory for new project (default: CWD)" >&2
+  echo "  -u URL    Configure git remote \"origin\"" >&2
+  echo "  --push    Push initial commit to remote" >&2
 }
 
 project_dir="."
 remote_url=""
+push_remote=false
 
-while getopts ":C:u:h" opt; do
-  case "${opt}" in
-    C) project_dir="${OPTARG}" ;;
-    u) remote_url="${OPTARG}" ;;
-    h) usage; exit 0 ;;
-    *) usage; exit 1 ;;
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -C)
+      project_dir="$2"
+      shift 2
+      ;;
+    -u)
+      remote_url="$2"
+      shift 2
+      ;;
+    --push|-p)
+      push_remote=true
+      shift 1
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
   esac
 done
-shift $((OPTIND - 1))
 
 template_repo="${QUICKSTART_TEMPLATE_REPO:-https://github.com/pahansen95/py-project-tmpl.git}"
 
@@ -41,4 +62,7 @@ git commit -m "Initial commit from template"
 # Configure remote if provided
 if [ -n "$remote_url" ]; then
   git remote add origin "$remote_url"
+  if [ "$push_remote" = true ]; then
+    git push -u origin HEAD || true
+  fi
 fi

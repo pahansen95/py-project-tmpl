@@ -155,7 +155,11 @@ def register(subparsers: SubParser) -> None:
   list_parser.set_defaults(func=list_venvs)
 
   deps_parser = actions.add_parser("deps", help="Install dependency group")
-  deps_parser.add_argument("group", choices=["base", "dev", "build", "docs"], help="Dependency group to install")
+  deps_parser.add_argument(
+    "group",
+    choices=["base", "dev", "build", "docs", "test"],
+    help="Dependency group to install",
+  )
   deps_parser.add_argument("--venv", default="default", help="Virtual environment name (default: 'default')")
   deps_parser.set_defaults(func=install_deps)
 

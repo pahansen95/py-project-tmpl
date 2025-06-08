@@ -1,4 +1,5 @@
 from pathlib import Path
+import argparse
 
 import pytest
 
@@ -20,3 +21,14 @@ def test_ensure_venv_exists(monkeypatch, tmp_path):
   assert hp.ensure_venv_exists("foo") == existing
   with pytest.raises(SystemExit):
     hp.ensure_venv_exists("bar")
+
+
+def test_deps_parser_includes_test_group() -> None:
+  parser = argparse.ArgumentParser()
+  subparsers = parser.add_subparsers(dest="tool")
+  hp.register(subparsers)
+  python_parser = subparsers.choices["python"]
+  action_subs = [a for a in python_parser._actions if isinstance(a, argparse._SubParsersAction)][0]
+  deps_parser = action_subs.choices["deps"]
+  group_action = [a for a in deps_parser._actions if getattr(a, "dest", None) == "group"][0]
+  assert "test" in group_action.choices

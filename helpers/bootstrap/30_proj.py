@@ -158,8 +158,8 @@ def run(
   layer_results.update(verify_project_structure(project_root))
 
   venv_configs = {
-    "dev": {"groups": ["base", "dev", "build", "docs"], "tools": True},
-    "test": {"groups": ["base", "dev"], "tools": False},
+    "dev": {"groups": ["base", "dev", "test", "build", "docs"], "tools": True},
+    "test": {"groups": ["base", "test"], "tools": False},
     "docs": {"groups": ["base", "docs"], "tools": False},
   }
 

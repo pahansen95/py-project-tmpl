@@ -54,3 +54,8 @@ def test_quickstart_pushes_to_remote(tmp_path: Path) -> None:
     check=True,
   )
   assert result.stdout.strip() == "1"
+
+
+def test_quickstart_removes_script(tmp_path: Path) -> None:
+  run_quickstart(tmp_path)
+  assert not (tmp_path / "quickstart.sh").exists()

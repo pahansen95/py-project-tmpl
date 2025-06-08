@@ -47,8 +47,9 @@ template_repo="${QUICKSTART_TEMPLATE_REPO:-https://github.com/pahansen95/py-proj
 
 git clone --depth 1 --branch trunk "$template_repo" "$project_dir"
 
-# Remove template git history
+# Remove template git history and the quickstart script itself
 rm -rf "$project_dir/.git"
+rm -f "$project_dir/quickstart.sh"
 
 cd "$project_dir"
 
@@ -58,6 +59,9 @@ git init -b trunk
 
 git add .
 git commit -m "Initial commit from template"
+
+# Remove any untracked files created during setup
+git clean -fd > /dev/null
 
 # Configure remote if provided
 if [ -n "$remote_url" ]; then

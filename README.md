@@ -45,8 +45,8 @@ environment and install the remaining tools.
 - `python -m helpers.tools lint` – lint via Ruff (fixes by default, use `--dry-run` to only check)
 - `python -m helpers.tools docs [build|serve]` – MkDocs commands
 
-Alternatively, use the `helpers/tool` wrapper which activates the required
-virtual environment automatically:
+Alternatively, use the `helpers/tool` wrapper which activates a matching
+virtual environment automatically (defaults to `dev`):
 
 ```bash
 helpers/tool <tool> [args]

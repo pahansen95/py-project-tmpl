@@ -15,7 +15,7 @@ pollute your new project.
 
 ```bash
 curl -L https://raw.githubusercontent.com/pahansen95/py-project-tmpl/trunk/quickstart.sh \
-  | bash -- -C ./project/path -u git@github.com:username/project.git -b trunk:main --push
+  | bash -s -- -C ./project/path -u git@github.com:username/project.git -b trunk:main --push
 ```
 
 ### Manual setup

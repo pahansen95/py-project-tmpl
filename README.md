@@ -41,8 +41,8 @@ environment and install the remaining tools.
 
 - `python -m helpers.tools build` – build distribution packages
 - `python -m helpers.tools test` – run pytest
-- `python -m helpers.tools format` – format via Ruff
-- `python -m helpers.tools lint` – lint via Ruff
+- `python -m helpers.tools format` – format via Ruff (use `--check` to only verify)
+- `python -m helpers.tools lint` – lint via Ruff (fixes by default, use `--dry-run` to only check)
 - `python -m helpers.tools docs [build|serve]` – MkDocs commands
 
 Alternatively, use the `helpers/tool` wrapper which activates the required

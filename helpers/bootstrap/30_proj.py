@@ -12,8 +12,8 @@ from pathlib import Path
 import shutil
 from typing import Any
 
-from .state import BootstrapState
-from .verify import verify_venv, verify_tool
+from helpers.bootstrap.state import BootstrapState
+from helpers.bootstrap.verify import verify_venv, verify_tool
 from helpers.tools import python as pytools
 from helpers.utils import configure_logging, run_command
 

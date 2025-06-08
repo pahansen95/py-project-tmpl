@@ -34,3 +34,15 @@ def test_record_verification():
   state = BootstrapState(project_root="/tmp")
   state.record_verification("python", {"installed": True})
   assert state.verifications["python"]["installed"]
+
+
+def test_serializes_platform():
+  state = BootstrapState(project_root="/tmp")
+  from helpers.bootstrap.platform import LinuxPlatform
+
+  state.platform = LinuxPlatform()
+  data = state.to_dict()
+  assert data["platform"] == "linux"
+  loaded = BootstrapState.from_dict(data)
+  assert loaded.platform is not None
+  assert loaded.platform.name == "linux"

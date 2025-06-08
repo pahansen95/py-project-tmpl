@@ -12,9 +12,9 @@ helpers/tool --help                  # list helper commands
 
 Bootstrap creates three virtual environments under `.venv/`:
 
-- `dev` – all dependencies for development
-- `test` – project and test dependencies
-- `docs` – documentation build/serve dependencies
+- `dev`  – all dependencies for development (stored in `.venv/`)
+- `test` – project and test dependencies (stored in `.venv/test`)
+- `docs` – documentation build/serve dependencies (stored in `.venv/docs`)
 
 ## Prerequisites
 

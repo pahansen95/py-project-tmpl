@@ -6,7 +6,7 @@ A sample Python project template based on **pyenv**, **uv**, and helper scripts.
 
 ```bash
 git clone <repo> && cd py-project-tmpl
-./bootstrap                          # setup dev/test/docs venvs and hooks
+helpers/bootstrap.sh                 # setup dev/test/docs venvs and hooks
 helpers/tool --help                  # list helper commands
 ```
 
@@ -20,7 +20,7 @@ Bootstrap creates three virtual environments under `.venv/`:
 
 The project requires **Python&nbsp;3.13** and the
 [uv](https://github.com/astral-sh/uv) package manager. Once both are
-available on your ``PATH`` you can run ``./bootstrap`` to create a virtual
+available on your ``PATH`` you can run ``helpers/bootstrap.sh`` to create a virtual
 environment and install the remaining tools.
 
 ### Python 3.13

@@ -2,17 +2,19 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $(basename "$0") [-C DIR] [-u REMOTE] [-b BRANCH] [--push]" >&2
-  echo "  -C DIR    Directory for new project (default: CWD)" >&2
-  echo "  -u URL    Configure git remote \"origin\"" >&2
-  echo "  -b NAME   Template branch to clone (default: trunk)" >&2
-  echo "  --push    Push initial commit to remote" >&2
+  echo "Usage: $(basename \"$0\") [-C DIR] [-u REMOTE] [-b SRC[:DST]] [--push]" >&2
+  echo "  -C DIR      Directory for new project (default: CWD)" >&2
+  echo "  -u URL      Configure git remote \"origin\"" >&2
+  echo "  -b SRC[:DST] Clone template branch SRC as local DST (default: trunk)" >&2
+  echo "  --push      Push initial commit to remote" >&2
 }
 
 project_dir="."
 remote_url=""
 template_branch="trunk"
+local_branch=""
 push_remote=false
+branch_spec=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -25,7 +27,7 @@ while [ $# -gt 0 ]; do
       shift 2
       ;;
     -b|--branch)
-      template_branch="$2"
+      branch_spec="$2"
       shift 2
       ;;
     --push|-p)
@@ -47,6 +49,19 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# Determine template and local branch names
+if [ -n "$branch_spec" ]; then
+  if [[ "$branch_spec" == *:* ]]; then
+    template_branch="${branch_spec%%:*}"
+    local_branch="${branch_spec#*:}"
+  else
+    template_branch="$branch_spec"
+    local_branch="$branch_spec"
+  fi
+else
+  local_branch="$template_branch"
+fi
+
 template_repo="${QUICKSTART_TEMPLATE_REPO:-https://github.com/pahansen95/py-project-tmpl.git}"
 
 # Clone the template into the target directory
@@ -61,7 +76,7 @@ cd "$project_dir"
 
 # Initialize a new repository and commit the template files
 
-git init -b "$template_branch"
+git init -b "$local_branch"
 
 git add .
 git commit -m "Initial commit from template"

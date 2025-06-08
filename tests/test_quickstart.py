@@ -65,17 +65,18 @@ def test_quickstart_removes_script(tmp_path: Path) -> None:
   assert not (tmp_path / "quickstart.sh").exists()
 
 
-def test_quickstart_uses_branch(tmp_path: Path) -> None:
-  branch = "custom"
-  subprocess.run(["git", "-C", str(ROOT), "branch", branch], check=True)
+def test_quickstart_uses_branch_mapping(tmp_path: Path) -> None:
+  src = "feature"
+  dst = "foobar"
+  subprocess.run(["git", "-C", str(ROOT), "branch", src], check=True)
   try:
-    run_quickstart(tmp_path, branch=branch)
+    run_quickstart(tmp_path, branch=f"{src}:{dst}")
     result = subprocess.run(
       ["git", "-C", str(tmp_path), "rev-parse", "--abbrev-ref", "HEAD"],
       capture_output=True,
       text=True,
       check=True,
     )
-    assert result.stdout.strip() == branch
+    assert result.stdout.strip() == dst
   finally:
-    subprocess.run(["git", "-C", str(ROOT), "branch", "-D", branch], check=True)
+    subprocess.run(["git", "-C", str(ROOT), "branch", "-D", src], check=True)

@@ -14,7 +14,11 @@ from pathlib import Path
 from typing import Callable, Dict
 import argparse
 
-SubParser = argparse._SubParsersAction[argparse.ArgumentParser]
+try:
+  SubParser = argparse._SubParsersAction[argparse.ArgumentParser]
+except TypeError:  # pragma: no cover - older Python
+  # Python <3.11 doesn't allow subscripting _SubParsersAction
+  SubParser = argparse._SubParsersAction  # type: ignore[type-arg]
 
 TOOL_REGISTRY: Dict[str, Callable[[SubParser], None]] = {}
 

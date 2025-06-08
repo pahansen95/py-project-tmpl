@@ -89,15 +89,15 @@ def verify_helper_scripts(project_root: Path) -> dict[str, Any]:
 
   helpers_dir = project_root / "helpers"
   expected_helpers = [
-    "bootstrap.py",
+    "bootstrap",
     "tool",
     "tools/build.py",
-    "test.py",
-    "format.py",
-    "lint.py",
-    "docs.py",
-    "python.py",
-    "cache.py",
+    "tools/test.py",
+    "tools/format.py",
+    "tools/lint.py",
+    "tools/docs.py",
+    "tools/python.py",
+    "tools/cache.py",
   ]
 
   for helper in expected_helpers:

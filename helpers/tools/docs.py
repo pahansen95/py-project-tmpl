@@ -1,5 +1,7 @@
 """Build or serve documentation."""
 
+from __future__ import annotations
+
 import argparse
 
 VENV_WANT = "docs"
@@ -8,7 +10,7 @@ from ..utils import add_common_args, configure_logging, logger, run_command, set
 
 
 def main(argv: list[str] | None = None) -> None:
-  parser = argparse.ArgumentParser()
+  parser = argparse.ArgumentParser(prog="docs")
   add_common_args(parser)
   parser.add_argument("action", choices=["build", "serve"])
   args = parser.parse_args(argv)

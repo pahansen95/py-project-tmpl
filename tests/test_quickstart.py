@@ -8,12 +8,16 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "quickstart.sh"
 
 
-def run_quickstart(dest: Path, remote: str | None = None, push: bool = False) -> None:
+def run_quickstart(
+  dest: Path, remote: str | None = None, push: bool = False, branch: str | None = None
+) -> None:
   env = os.environ.copy()
   env["QUICKSTART_TEMPLATE_REPO"] = str(ROOT)
   cmd = [str(SCRIPT), "-C", str(dest)]
   if remote:
     cmd += ["-u", remote]
+  if branch:
+    cmd += ["-b", branch]
   if push:
     cmd.append("--push")
   subprocess.run(cmd, check=True, env=env)
@@ -59,3 +63,19 @@ def test_quickstart_pushes_to_remote(tmp_path: Path) -> None:
 def test_quickstart_removes_script(tmp_path: Path) -> None:
   run_quickstart(tmp_path)
   assert not (tmp_path / "quickstart.sh").exists()
+
+
+def test_quickstart_uses_branch(tmp_path: Path) -> None:
+  branch = "custom"
+  subprocess.run(["git", "-C", str(ROOT), "branch", branch], check=True)
+  try:
+    run_quickstart(tmp_path, branch=branch)
+    result = subprocess.run(
+      ["git", "-C", str(tmp_path), "rev-parse", "--abbrev-ref", "HEAD"],
+      capture_output=True,
+      text=True,
+      check=True,
+    )
+    assert result.stdout.strip() == branch
+  finally:
+    subprocess.run(["git", "-C", str(ROOT), "branch", "-D", branch], check=True)

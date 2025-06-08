@@ -2,14 +2,16 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $(basename "$0") [-C DIR] [-u REMOTE] [--push]" >&2
+  echo "Usage: $(basename "$0") [-C DIR] [-u REMOTE] [-b BRANCH] [--push]" >&2
   echo "  -C DIR    Directory for new project (default: CWD)" >&2
   echo "  -u URL    Configure git remote \"origin\"" >&2
+  echo "  -b NAME   Template branch to clone (default: trunk)" >&2
   echo "  --push    Push initial commit to remote" >&2
 }
 
 project_dir="."
 remote_url=""
+template_branch="trunk"
 push_remote=false
 
 while [ $# -gt 0 ]; do
@@ -20,6 +22,10 @@ while [ $# -gt 0 ]; do
       ;;
     -u)
       remote_url="$2"
+      shift 2
+      ;;
+    -b|--branch)
+      template_branch="$2"
       shift 2
       ;;
     --push|-p)
@@ -45,7 +51,7 @@ template_repo="${QUICKSTART_TEMPLATE_REPO:-https://github.com/pahansen95/py-proj
 
 # Clone the template into the target directory
 
-git clone --depth 1 --branch trunk "$template_repo" "$project_dir"
+git clone --depth 1 --branch "$template_branch" "$template_repo" "$project_dir"
 
 # Remove template git history and the quickstart script itself
 rm -rf "$project_dir/.git"
@@ -55,7 +61,7 @@ cd "$project_dir"
 
 # Initialize a new repository and commit the template files
 
-git init -b trunk
+git init -b "$template_branch"
 
 git add .
 git commit -m "Initial commit from template"

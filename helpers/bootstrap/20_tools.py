@@ -13,7 +13,7 @@ from typing import Any
 from .state import BootstrapState
 from .platform import get_platform_handler
 from .verify import verify_tool
-from ..utils import configure_logging, run_command, check_command_exists
+from helpers.utils import configure_logging, run_command, check_command_exists
 
 logger = logging.getLogger(__name__)
 

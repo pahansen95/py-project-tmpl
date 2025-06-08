@@ -14,8 +14,8 @@ from typing import Any
 
 from .state import BootstrapState
 from .verify import verify_venv, verify_tool
-from ..tools import python as pytools
-from ..utils import configure_logging, run_command
+from helpers.tools import python as pytools
+from helpers.utils import configure_logging, run_command
 
 logger = logging.getLogger(__name__)
 

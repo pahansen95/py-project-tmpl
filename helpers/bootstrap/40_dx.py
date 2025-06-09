@@ -13,6 +13,7 @@ from typing import Any
 
 from helpers.bootstrap.state import BootstrapState
 from helpers.utils import configure_logging, run_command
+import helpers.tools.python as pytools
 
 logger = logging.getLogger(__name__)
 
@@ -21,19 +22,17 @@ def install_pre_commit_hooks(project_root: Path) -> dict[str, Any]:
   """Install pre-commit hooks in the repository."""
   result = {"pre_commit": {"installed": False, "error": None}}
 
-  try:
-    # Check if pre-commit is available
-    check = run_command(["pre-commit", "--version"], check=False)
-    if check.returncode != 0:
-      result["pre_commit"]["error"] = "pre-commit not found"
-      logger.warning("pre-commit not available, skipping hook installation")
-      return result
+  pre_commit = project_root / pytools.resolve_venv_path("default") / "bin" / "pre-commit"
 
-    # Install hooks
-    run_command(["pre-commit", "install"], check=True)
+  if not pre_commit.exists():
+    result["pre_commit"]["error"] = "pre-commit not found"
+    logger.warning("pre-commit not available, skipping hook installation")
+    return result
+
+  try:
+    run_command([str(pre_commit), "install"], check=True)
     result["pre_commit"]["installed"] = True
     logger.info("Pre-commit hooks installed successfully")
-
   except subprocess.CalledProcessError as e:
     result["pre_commit"]["error"] = str(e)
     logger.error("Failed to install pre-commit hooks: %s", e)

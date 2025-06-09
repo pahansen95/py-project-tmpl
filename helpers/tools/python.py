@@ -37,11 +37,16 @@ def install_python(args: argparse.Namespace) -> None:
   version = version_file.read_text().strip()
   logger.debug("target version: %s", version)
 
-  result = run_command([
-    "pyenv",
-    "versions",
-    "--bare",
-  ], capture_output=True, text=True, check=False)
+  result = run_command(
+    [
+      "pyenv",
+      "versions",
+      "--bare",
+    ],
+    capture_output=True,
+    text=True,
+    check=False,
+  )
 
   installed = result.stdout.strip().split("\n") if result.stdout else []
   if version in installed and not args.force:
@@ -116,7 +121,7 @@ def install_deps(args: argparse.Namespace) -> None:
   logger.info("Installing '%s' dependencies in '%s'...", args.group, args.venv)
 
   if args.group == "base":
-    cmd = ["uv", "pip", "install", "-r", "uv.lock"]
+    cmd = ["uv", "pip", "install", "--resolution=locked", "-r", "uv.lock"]
   else:
     cmd = ["uv", "pip", "install", "--group", args.group]
 
@@ -167,4 +172,3 @@ def register(subparsers: SubParser) -> None:
   run_parser.add_argument("command", nargs=argparse.REMAINDER, help="Command to run")
   run_parser.add_argument("--venv", default="default", help="Virtual environment name (default: 'default')")
   run_parser.set_defaults(func=run_in_venv)
-

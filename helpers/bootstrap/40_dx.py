@@ -6,15 +6,25 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 from helpers.bootstrap.state import BootstrapState
+from helpers.tools import python as pytools
 from helpers.utils import configure_logging, run_command
 
 logger = logging.getLogger(__name__)
+
+
+def venv_environment(venv_path: Path) -> dict[str, str]:
+  """Return an environment dict with *venv_path* activated."""
+  env = os.environ.copy()
+  env["VIRTUAL_ENV"] = str(venv_path)
+  env["PATH"] = f"{venv_path / 'bin'}{os.pathsep}" + env.get("PATH", "")
+  return env
 
 
 def install_pre_commit_hooks(project_root: Path) -> dict[str, Any]:
@@ -22,15 +32,17 @@ def install_pre_commit_hooks(project_root: Path) -> dict[str, Any]:
   result = {"pre_commit": {"installed": False, "error": None}}
 
   try:
-    # Check if pre-commit is available
-    check = run_command(["pre-commit", "--version"], check=False)
-    if check.returncode != 0:
+    venv = project_root / pytools.resolve_venv_path("default")
+    env = venv_environment(venv)
+
+    try:
+      run_command(["pre-commit", "--version"], check=False, env=env)
+    except FileNotFoundError:
       result["pre_commit"]["error"] = "pre-commit not found"
       logger.warning("pre-commit not available, skipping hook installation")
       return result
 
-    # Install hooks
-    run_command(["pre-commit", "install"], check=True)
+    run_command(["pre-commit", "install"], check=True, env=env)
     result["pre_commit"]["installed"] = True
     logger.info("Pre-commit hooks installed successfully")
 

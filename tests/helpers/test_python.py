@@ -1,5 +1,6 @@
 from pathlib import Path
 import argparse
+import subprocess
 
 import pytest
 
@@ -32,3 +33,28 @@ def test_deps_parser_includes_test_group() -> None:
   deps_parser = action_subs.choices["deps"]
   group_action = [a for a in deps_parser._actions if getattr(a, "dest", None) == "group"][0]
   assert "test" in group_action.choices
+
+
+def test_install_deps_base_uses_locked(monkeypatch):
+  calls = []
+
+  def fake_run(cmd, *args, **kwargs):
+    calls.append(cmd)
+    return subprocess.CompletedProcess(cmd, 0)
+
+  monkeypatch.setattr(hp, "run_command", fake_run)
+  monkeypatch.setattr(hp, "ensure_venv_exists", lambda name: Path("venv"))
+
+  args = argparse.Namespace(group="base", venv="default")
+  hp.install_deps(args)
+
+  assert calls[0] == [
+    "uv",
+    "pip",
+    "install",
+    "--resolution=locked",
+    "-r",
+    "uv.lock",
+    "--python",
+    "venv",
+  ]

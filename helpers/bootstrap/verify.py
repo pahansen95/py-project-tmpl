@@ -22,7 +22,7 @@ def verify_venv(venv_path: Path) -> dict[str, Any]:
 
   if all([checks["exists"], checks["pyvenv_cfg"], checks["python_executable"]]):
     result = run_command(
-      [str(venv_path / "bin/python"), "-m", "pip", "--version"],
+      ["uv", "pip", "list", "--python", str(venv_path)],
       check=False,
       capture_output=True,
       text=True,

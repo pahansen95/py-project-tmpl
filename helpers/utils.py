@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import http.client
 import logging
 import os
 import shlex
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
-from typing import Generator, Sequence
+from typing import Callable, Generator, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -133,3 +135,131 @@ def setup_working_directory(args: argparse.Namespace) -> contextlib.AbstractCont
     else:
       # Already at project root, no-op context manager
       return contextlib.nullcontext()
+
+
+class HttpResponse(contextlib.AbstractContextManager):
+  """Wrapper around :class:`http.client.HTTPResponse`."""
+
+  def __init__(self, raw: http.client.HTTPResponse) -> None:
+    self._raw = raw
+    self._buffer: bytes | None = None
+    self.status = raw.status
+    self.headers = dict(raw.getheaders())
+
+  def __enter__(self) -> "HttpResponse":
+    return self
+
+  def __exit__(self, exc_type, exc, tb) -> None:
+    self._raw.close()
+
+  def read(self) -> bytes:
+    """Return the entire response body."""
+    if self._buffer is None:
+      self._buffer = self._raw.read()
+    return self._buffer
+
+  def stream(self, chunk_size: int = 8192) -> Generator[bytes, None, None]:
+    """Yield response body data in ``chunk_size`` increments."""
+    if self._buffer is not None:
+      for i in range(0, len(self._buffer), chunk_size):
+        yield self._buffer[i : i + chunk_size]
+    else:
+      while True:
+        chunk = self._raw.read(chunk_size)
+        if not chunk:
+          break
+        yield chunk
+
+
+class HttpSession(contextlib.AbstractContextManager):
+  """Minimal HTTP client using :mod:`http.client`."""
+
+  def __init__(self, base_url: str, *, timeout: float | None = None) -> None:
+    parsed = urllib.parse.urlsplit(base_url)
+    if parsed.scheme not in {"http", "https"}:
+      raise ValueError(f"Unsupported scheme: {parsed.scheme!r}")
+
+    self.scheme = parsed.scheme
+    self.host = parsed.hostname or ""
+    self.port = parsed.port
+    self.base_path = parsed.path.rstrip("/")
+    self.timeout = timeout
+    self._conn: http.client.HTTPConnection | None = None
+
+  def __enter__(self) -> "HttpSession":
+    conn_cls = http.client.HTTPSConnection if self.scheme == "https" else http.client.HTTPConnection
+    self._conn = conn_cls(self.host, self.port, timeout=self.timeout)
+    return self
+
+  def __exit__(self, exc_type, exc, tb) -> None:
+    if self._conn is not None:
+      self._conn.close()
+
+  def _make_path(self, path: str) -> str:
+    if not path.startswith("/"):
+      path = f"/{path}"
+    return f"{self.base_path}{path}" if self.base_path else path
+
+  @contextlib.contextmanager
+  def request(
+    self,
+    method: str,
+    path: str,
+    *,
+    headers: dict[str, str] | None = None,
+    body: str | bytes | None = None,
+  ) -> Generator["HttpResponse", None, None]:
+    if self._conn is None:
+      raise RuntimeError("Session not active")
+
+    target = self._make_path(path)
+    data = body.encode() if isinstance(body, str) else body
+    self._conn.request(method, target, body=data, headers=headers or {})
+    raw = self._conn.getresponse()
+    resp = HttpResponse(raw)
+    try:
+      yield resp
+    finally:
+      raw.close()
+
+  @contextlib.contextmanager
+  def get(self, path: str, *, headers: dict[str, str] | None = None) -> Generator["HttpResponse", None, None]:
+    with self.request("GET", path, headers=headers) as resp:
+      yield resp
+
+  @contextlib.contextmanager
+  def post(
+    self,
+    path: str,
+    body: str | bytes | None = None,
+    *,
+    headers: dict[str, str] | None = None,
+  ) -> Generator["HttpResponse", None, None]:
+    with self.request("POST", path, headers=headers, body=body) as resp:
+      yield resp
+
+  def paginate(
+    self,
+    path: str,
+    next_page: Callable[["HttpResponse"], str | None],
+    *,
+    method: str = "GET",
+    headers: dict[str, str] | None = None,
+    body: str | bytes | None = None,
+    cache_body: bool = True,
+  ) -> Generator["HttpResponse", None, None]:
+    """Iterate over paginated responses.
+
+    ``next_page`` should return the path for the next request or ``None``.
+    If ``cache_body`` is ``True`` the response body is read before ``next_page``
+    is invoked.
+    """
+    while True:
+      with self.request(method, path, headers=headers, body=body) as resp:
+        if cache_body:
+          resp.read()
+        next_path = next_page(resp)
+        yield resp
+      if next_path is None:
+        break
+      path = next_path

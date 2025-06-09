@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-script_dir="$(cd "$(dirname "$0")" && pwd)"
-root="$script_dir"
-
-export PYTHONPATH="$root${PYTHONPATH+:$PYTHONPATH}"
-exec python -m helpers.bootstrap "$@"

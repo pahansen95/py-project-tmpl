@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Layer 4: Developer Experience - Configure git hooks, helpers, and IDE settings."""
+"""Layer 4: Developer Experience - Configure git hooks and helper scripts."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from typing import Any
 
 from helpers.bootstrap.state import BootstrapState
 from helpers.utils import configure_logging, run_command
+import helpers.tools.python as pytools
 
 logger = logging.getLogger(__name__)
 
@@ -21,19 +22,17 @@ def install_pre_commit_hooks(project_root: Path) -> dict[str, Any]:
   """Install pre-commit hooks in the repository."""
   result = {"pre_commit": {"installed": False, "error": None}}
 
-  try:
-    # Check if pre-commit is available
-    check = run_command(["pre-commit", "--version"], check=False)
-    if check.returncode != 0:
-      result["pre_commit"]["error"] = "pre-commit not found"
-      logger.warning("pre-commit not available, skipping hook installation")
-      return result
+  pre_commit = project_root / pytools.resolve_venv_path("default") / "bin" / "pre-commit"
 
-    # Install hooks
-    run_command(["pre-commit", "install"], check=True)
+  if not pre_commit.exists():
+    result["pre_commit"]["error"] = "pre-commit not found"
+    logger.warning("pre-commit not available, skipping hook installation")
+    return result
+
+  try:
+    run_command([str(pre_commit), "install"], check=True)
     result["pre_commit"]["installed"] = True
     logger.info("Pre-commit hooks installed successfully")
-
   except subprocess.CalledProcessError as e:
     result["pre_commit"]["error"] = str(e)
     logger.error("Failed to install pre-commit hooks: %s", e)
@@ -45,42 +44,6 @@ def verify_pre_commit_hooks(project_root: Path) -> dict[str, Any]:
   """Check if pre-commit hooks are installed."""
   hooks_dir = project_root / ".git" / "hooks" / "pre-commit"
   return {"pre_commit": {"installed": hooks_dir.exists()}}
-
-
-def configure_ide_settings(project_root: Path) -> dict[str, Any]:
-  """Create IDE configuration files if not present."""
-  result = {"ide_settings": {"vscode": False, "pycharm": False}}
-
-  # VS Code settings
-  vscode_dir = project_root / ".vscode"
-  if not vscode_dir.exists():
-    vscode_dir.mkdir(parents=True)
-    settings = {
-      "python.linting.enabled": True,
-      "python.linting.ruffEnabled": True,
-      "python.formatting.provider": "none",
-      "[python]": {"editor.formatOnSave": True, "editor.codeActionsOnSave": {"source.fixAll.ruff": True}},
-    }
-    (vscode_dir / "settings.json").write_text(json.dumps(settings, indent=2))
-    result["ide_settings"]["vscode"] = True
-    logger.info("Created VS Code settings")
-
-  # PyCharm settings
-  idea_dir = project_root / ".idea"
-  if not idea_dir.exists():
-    idea_dir.mkdir(parents=True)
-    (idea_dir / ".gitignore").write_text("*\n!.gitignore\n")
-    result["ide_settings"]["pycharm"] = True
-    logger.info("Created PyCharm directory structure")
-
-  return result
-
-
-def verify_ide_settings(project_root: Path) -> dict[str, Any]:
-  """Verify presence of IDE configuration directories."""
-  vscode_dir = project_root / ".vscode" / "settings.json"
-  idea_dir = project_root / ".idea"
-  return {"ide_settings": {"vscode": vscode_dir.exists(), "pycharm": idea_dir.exists()}}
 
 
 def verify_helper_scripts(project_root: Path) -> dict[str, Any]:
@@ -119,7 +82,6 @@ def run(
   state: BootstrapState,
   *,
   skip_pre_commit: bool = False,
-  skip_ide: bool = False,
 ) -> BootstrapState:
   """Execute the developer experience layer."""
 
@@ -132,14 +94,6 @@ def run(
     layer_results.update(pre_res)
     verify_res = verify_pre_commit_hooks(project_root)
     state.record_verification("pre_commit", verify_res)
-    layer_results.update(verify_res)
-
-  if not skip_ide:
-    ide_res = configure_ide_settings(project_root)
-    state.record_decision("ide_settings", "configure")
-    layer_results.update(ide_res)
-    verify_res = verify_ide_settings(project_root)
-    state.record_verification("ide_settings", verify_res)
     layer_results.update(verify_res)
 
   verify_helpers = verify_helper_scripts(project_root)
@@ -157,7 +111,6 @@ def main() -> None:
   parser = argparse.ArgumentParser(description="Layer 4: Developer Experience")
   parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
   parser.add_argument("--skip-pre-commit", action="store_true", help="Skip pre-commit setup")
-  parser.add_argument("--skip-ide", action="store_true", help="Skip IDE configuration")
   args = parser.parse_args()
 
   configure_logging(args.verbose)
@@ -180,7 +133,6 @@ def main() -> None:
   state = run(
     state,
     skip_pre_commit=args.skip_pre_commit,
-    skip_ide=args.skip_ide,
   )
 
   # Output state to stdout

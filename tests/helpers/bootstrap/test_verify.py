@@ -1,15 +1,13 @@
 from helpers.bootstrap.verify import verify_tool, verify_venv
 import importlib
-import os
 import subprocess
 from pathlib import Path
-from typing import Any
 
 import helpers.tools.python as pytools
 
 dx = importlib.import_module("helpers.bootstrap.40_dx")
 verify_pre_commit_hooks = dx.verify_pre_commit_hooks
-venv_environment = dx.venv_environment
+install_pre_commit_hooks = dx.install_pre_commit_hooks
 
 
 def test_verify_tool_python():
@@ -51,42 +49,28 @@ def test_verify_pre_commit_hooks(tmp_path):
   assert res["pre_commit"]["installed"]
 
 
-def test_venv_environment_sets_path(tmp_path):
-  env = venv_environment(tmp_path)
-  assert env["VIRTUAL_ENV"] == str(tmp_path)
-  assert str(tmp_path / "bin") in env["PATH"].split(os.pathsep)[0]
-
-
-def test_install_pre_commit_hooks_uses_venv(monkeypatch, tmp_path):
-  calls: list[tuple[list[str], dict[str, Any]]] = []
+def test_install_pre_commit_hooks_invokes_precommit(monkeypatch, tmp_path):
+  calls: list[list[str]] = []
 
   def fake_run(cmd, *args, **kwargs):
-    calls.append((cmd, kwargs))
+    calls.append(cmd)
     return subprocess.CompletedProcess(cmd, 0)
-
-  venv_path = tmp_path / "env"
-  bin_dir = venv_path / "bin"
-  bin_dir.mkdir(parents=True)
 
   monkeypatch.setattr(dx, "run_command", fake_run)
   monkeypatch.setattr(pytools, "resolve_venv_path", lambda name: Path("env"))
 
-  res = dx.install_pre_commit_hooks(tmp_path)
+  precommit = tmp_path / "env" / "bin" / "pre-commit"
+  precommit.parent.mkdir(parents=True)
+  precommit.write_text("echo")
 
-  cmd, kwargs = calls[0]
-  assert cmd == ["pre-commit", "--version"]
-  assert kwargs["env"]["PATH"].split(os.pathsep)[0] == str(bin_dir)
+  res = install_pre_commit_hooks(tmp_path)
+
+  assert calls[0] == [str(precommit), "install"]
   assert res["pre_commit"]["installed"]
 
 
-def test_install_pre_commit_hooks_handles_missing(monkeypatch, tmp_path):
-  def raise_fn(*args, **kwargs):
-    raise FileNotFoundError
-
-  monkeypatch.setattr(dx, "run_command", raise_fn)
+def test_install_pre_commit_hooks_missing(monkeypatch, tmp_path):
   monkeypatch.setattr(pytools, "resolve_venv_path", lambda name: Path("env"))
-
-  res = dx.install_pre_commit_hooks(tmp_path)
-
+  res = install_pre_commit_hooks(tmp_path)
   assert not res["pre_commit"]["installed"]
   assert res["pre_commit"]["error"] == "pre-commit not found"

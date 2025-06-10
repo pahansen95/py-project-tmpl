@@ -1,0 +1,7 @@
+{
+  "provider": "OpenAI:Azure",
+  "base_url": "https://YOUR_RESOURCE.openai.azure.com",
+  "deployment": "gpt-35-turbo",
+  "api_version": "2023-05-15",
+  "api_key": "$AZURE_OPENAI_KEY"
+}

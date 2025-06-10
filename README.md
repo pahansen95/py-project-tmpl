@@ -81,3 +81,13 @@ Development requirements live in optional groups:
 - `dev` – linting, testing, and formatting tools
 - `docs` – MkDocs and related tooling
 
+### Chat CLI
+
+Interact with chat models via:
+
+```bash
+helpers/tool chat --fmt txt:log --prompt system.txt --conf helpers/tools/_data/chat/openai.json <input.txt
+```
+
+Sample configuration files live under `helpers/tools/_data/chat` and may reference environment variables using the `$NAME` syntax.
+

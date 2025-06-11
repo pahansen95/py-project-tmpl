@@ -1,6 +1,6 @@
 # LLM Provider Configuration Specification
 
-**Version**: 1.2  
+**Version**: 1.3  
 **Last Updated**: 2025-06-11
 
 ## Overview
@@ -60,13 +60,54 @@ provider:                          # Root configuration map
       reasoning_effort: string    # For reasoning models
   ]
 
-profiles: list[                   # Optional: Usage presets
+profiles: list[                   # Required: Usage presets
   name: string                    # Required: Profile identifier
   description: string             # Optional: Purpose description
   model: string                   # Optional: Model override
   # Additional model opts...
 ]
 ```
+
+## Standardized Profiles
+
+Providers must implement these four required profiles with exact names. Additional custom profiles may be added after the required ones.
+
+### Required Profiles
+
+**oneshot**
+- Purpose: General-purpose tasks without reasoning
+- Model: Largest available non-reasoning model
+- Temperature: 0.7-1.0 (provider discretion)
+- Standard output token limits
+
+**oneshot-fast**
+- Purpose: Rapid responses without reasoning
+- Model: Smallest non-reasoning model with acceptable quality
+- Temperature: 0.7 recommended
+- Limited output tokens (1024-4096)
+
+**reason**
+- Purpose: Brief chain-of-thought reasoning
+- Model: Smallest reasoning-capable model
+- Configuration: Optimized for concise reasoning
+- Output tokens: Constrained to encourage brevity
+
+**reason-high**
+- Purpose: Extended chain-of-thought reasoning
+- Model: Largest reasoning-capable model  
+- Configuration: Maximum reasoning effort/depth
+- Output tokens: Maximum supported by model
+
+### Custom Profiles
+
+Providers may include additional profiles after the required four. Common patterns include:
+- **budget**: Cost-optimized configuration
+- **creative**: High temperature (0.9+) for creative content
+- **code**: Low temperature (0.1-0.3) for technical output
+- **json**: Structured output generation
+- **extended**: Maximum output length for non-reasoning models
+
+Custom profiles should include descriptive names and clear purpose descriptions.
 
 ## Variable Resolution
 
@@ -125,7 +166,7 @@ index    := [0-9]+
 3. Provider options
 4. API endpoints
 5. Models (by tier: flagship → specialized → budget → legacy)
-6. Profiles (by use: default → quality → cost → specialized)
+6. Profiles (required four → custom profiles)
 
 ### Documentation
 
@@ -174,7 +215,7 @@ field = value  # Required|Optional: Description
 
 ```toml
 # OpenAI Provider Configuration
-# Version: 1.2
+# Version: 1.3
 # Last Updated: 2025-06-11
 
 [provider]
@@ -242,19 +283,53 @@ reasoning_effort = "medium"  # low, medium, high
 
 
 # ===========================
-# Usage Profiles
+# Required Profiles
 # ===========================
 
 [[profiles]]
-name = "budget"
-description = "Cost-optimized for high-volume processing"
+name = "oneshot"
+description = "General-purpose tasks without reasoning"
+model = "gpt-4.1"
+temperature = 0.8
+max_output_tokens = 8192
+
+[[profiles]]
+name = "oneshot-fast"
+description = "Rapid responses without reasoning"
 model = "gpt-4.1-nano"
 temperature = 0.7
 max_output_tokens = 2048
 
 [[profiles]]
-name = "reasoning"
-description = "Analytical tasks requiring chain-of-thought"
+name = "reason"
+description = "Brief chain-of-thought reasoning"
+model = "o3-mini"
+reasoning_effort = "medium"
+max_output_tokens = 10000
+
+[[profiles]]
+name = "reason-high"
+description = "Extended chain-of-thought reasoning"
 model = "o3"
 reasoning_effort = "high"
+max_output_tokens = 100000
+
+# ===========================
+# Custom Profiles
+# ===========================
+
+[[profiles]]
+name = "budget"
+description = "Cost-optimized configuration"
+model = "gpt-4.1-nano"
+temperature = 0.7
+max_output_tokens = 1024
+
+[[profiles]]
+name = "creative"
+description = "Creative content generation"
+model = "gpt-4.1"
+temperature = 0.9
+top_p = 0.98
+max_output_tokens = 8192
 ```

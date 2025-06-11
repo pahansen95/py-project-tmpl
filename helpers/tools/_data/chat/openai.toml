@@ -1,0 +1,246 @@
+# OpenAI Provider Configuration
+# Version: 1.1
+# Last Updated: 2025-06-11
+
+[provider]
+name = "OpenAI"
+api_key = "${OPENAI_API_KEY}"
+default_model = "gpt-4.1"
+
+[provider.connection]
+base_url = "https://api.openai.com/v1"
+headers = { }  # Auth headers are handled separately
+
+[provider.opts]
+# Optional: Set these if you belong to an organization or want to scope to a project
+organization = "${OPENAI_ORG_ID}"     # Format: org-xxxxxxxxxxxxxxxxxxxxxx
+project = "${OPENAI_PROJECT_ID}"      # Format: proj-xxxxxxxxxxxxxxxxxxxxxx
+
+[provider.endpoints]
+chat = "/chat/completions"
+models = "/models"
+
+# ===========================
+# GPT-4.1 Series (Latest 2025)
+# ===========================
+
+[[provider.models]]
+name = "gpt-4.1"
+id = "gpt-4.1"
+limits.input_tokens = 1000000
+limits.output_tokens = 32768
+limits.context_window = 1000000
+limits.rate_limit = 5000
+cost.input = 3.00
+cost.output = 12.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 1.0
+opts.max_output_tokens = 32768
+
+[[provider.models]]
+name = "gpt-4.1-mini"
+id = "gpt-4.1-mini"
+limits.input_tokens = 1000000
+limits.output_tokens = 32768
+limits.context_window = 1000000
+limits.rate_limit = 5000
+cost.input = 0.75
+cost.output = 3.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 1.0
+opts.max_output_tokens = 32768
+
+[[provider.models]]
+name = "gpt-4.1-nano"
+id = "gpt-4.1-nano"
+limits.input_tokens = 1000000
+limits.output_tokens = 32768
+limits.context_window = 1000000
+limits.rate_limit = 5000
+cost.input = 0.12
+cost.output = 0.48
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text"]
+opts.temperature = 1.0
+opts.top_p = 1.0
+opts.max_output_tokens = 32768
+
+# ===========================
+# Reasoning Models (o-series)
+# ===========================
+
+[[provider.models]]
+name = "o3"
+id = "o3"
+limits.input_tokens = 200000
+limits.output_tokens = 100000
+limits.context_window = 200000
+limits.rate_limit = 500
+cost.input = 2.00
+cost.output = 8.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["reasoning", "text"]
+# o-series models have fixed parameters
+opts.temperature = 1.0
+opts.top_p = 1.0
+opts.reasoning_effort = "medium"  # low, medium, high
+
+[[provider.models]]
+name = "o3-mini"
+id = "o3-mini"
+limits.input_tokens = 200000
+limits.output_tokens = 100000
+limits.context_window = 200000
+limits.rate_limit = 1000
+cost.input = 0.60
+cost.output = 2.40
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["reasoning", "text"]
+opts.temperature = 1.0
+opts.top_p = 1.0
+opts.reasoning_effort = "medium"
+
+[[provider.models]]
+name = "o4-mini"
+id = "o4-mini"
+limits.input_tokens = 200000
+limits.output_tokens = 100000
+limits.context_window = 200000
+limits.rate_limit = 1000
+cost.input = 1.10
+cost.output = 4.40
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["reasoning", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 1.0
+opts.reasoning_effort = "medium"
+
+# ===========================
+# GPT-4o Series
+# ===========================
+
+[[provider.models]]
+name = "gpt-4o"
+id = "gpt-4o"
+limits.input_tokens = 128000
+limits.output_tokens = 4096
+limits.context_window = 128000
+limits.rate_limit = 3500
+cost.input = 5.00
+cost.output = 15.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 1.0
+opts.max_output_tokens = 4096
+
+[[provider.models]]
+name = "gpt-4o-mini"
+id = "gpt-4o-mini"
+limits.input_tokens = 128000
+limits.output_tokens = 4096
+limits.context_window = 128000
+limits.rate_limit = 5000
+cost.input = 0.15
+cost.output = 0.60
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 1.0
+opts.max_output_tokens = 4096
+
+# ===========================
+# Legacy Models (Still Active)
+# ===========================
+
+[[provider.models]]
+name = "gpt-4-turbo"
+id = "gpt-4-turbo"
+limits.input_tokens = 128000
+limits.output_tokens = 4096
+limits.context_window = 128000
+limits.rate_limit = 3500
+cost.input = 10.00
+cost.output = 30.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 1.0
+opts.max_output_tokens = 4096
+
+[[provider.models]]
+name = "gpt-4"
+id = "gpt-4"
+limits.input_tokens = 8192
+limits.output_tokens = 4096
+limits.context_window = 8192
+limits.rate_limit = 200
+cost.input = 30.00
+cost.output = 60.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text"]
+opts.temperature = 1.0
+opts.top_p = 1.0
+opts.max_output_tokens = 4096
+
+[[provider.models]]
+name = "gpt-3.5-turbo"
+id = "gpt-3.5-turbo"
+limits.input_tokens = 16000
+limits.output_tokens = 4096
+limits.context_window = 16000
+limits.rate_limit = 5000
+cost.input = 0.50
+cost.output = 1.50
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text"]
+opts.temperature = 1.0
+opts.top_p = 1.0
+opts.max_output_tokens = 4096
+
+# ===========================
+# Usage Profiles
+# ===========================
+
+[[profiles]]
+name = "budget"
+description = "Cost-optimized profile for high-volume processing"
+temperature = 0.7
+max_output_tokens = 2048
+model = "gpt-4.1-nano"
+
+[[profiles]]
+name = "quality"
+description = "Quality-optimized profile for complex tasks"
+temperature = 0.8
+max_output_tokens = 4096
+model = "gpt-4.1"
+
+[[profiles]]
+name = "reasoning"
+description = "Reasoning profile for analytical tasks"
+model = "o3"
+reasoning_effort = "high"
+max_output_tokens = 100000
+
+[[profiles]]
+name = "fast"
+description = "Fast response profile"
+temperature = 0.7
+max_output_tokens = 1024
+model = "gpt-4o-mini"

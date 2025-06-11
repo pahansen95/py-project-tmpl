@@ -1,0 +1,205 @@
+# Anthropic Provider Configuration
+# Version: 1.1
+# Last Updated: 2025-06-11
+
+[provider]
+name = "Anthropic"
+api_key = "${ANTHROPIC_API_KEY}"
+default_model = "claude-3-5-sonnet"
+
+[provider.connection]
+base_url = "https://api.anthropic.com/v1"
+headers = { }  # Auth headers are handled separately
+
+[provider.opts]
+# Optional: Configure beta features and API version
+anthropic_version = "2023-06-01"
+beta = ["prompt-caching-2024-07-31"]  # Add beta features as needed
+
+[provider.endpoints]
+chat = "/messages"
+models = "/models"
+
+# ===========================
+# Claude 4 Series (Latest 2025)
+# ===========================
+
+[[provider.models]]
+name = "claude-opus-4"
+id = "claude-opus-4-20250514"
+limits.input_tokens = 200000
+limits.output_tokens = 4096
+limits.context_window = 200000
+limits.rate_limit = 50
+cost.input = 15.00
+cost.output = 75.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["reasoning", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 0.999
+opts.max_output_tokens = 4096
+
+[[provider.models]]
+name = "claude-sonnet-4"
+id = "claude-sonnet-4-20250514"
+limits.input_tokens = 200000
+limits.output_tokens = 4096
+limits.context_window = 200000
+limits.rate_limit = 50
+cost.input = 3.00
+cost.output = 15.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["reasoning", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 0.999
+opts.max_output_tokens = 4096
+
+# ===========================
+# Claude 3.7 Series
+# ===========================
+
+[[provider.models]]
+name = "claude-3-7-sonnet"
+id = "claude-3-7-sonnet-20250219"
+limits.input_tokens = 200000
+limits.output_tokens = 128000
+limits.context_window = 200000
+limits.rate_limit = 50
+cost.input = 3.00
+cost.output = 15.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 0.999
+opts.max_output_tokens = 64000
+
+# ===========================
+# Claude 3.5 Series
+# ===========================
+
+[[provider.models]]
+name = "claude-3-5-sonnet"
+id = "claude-3-5-sonnet-20241022"
+limits.input_tokens = 200000
+limits.output_tokens = 8192
+limits.context_window = 200000
+limits.rate_limit = 50
+cost.input = 3.00
+cost.output = 15.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 0.999
+opts.max_output_tokens = 8192
+
+[[provider.models]]
+name = "claude-3-5-haiku"
+id = "claude-3-5-haiku-20241022"
+limits.input_tokens = 200000
+limits.output_tokens = 8192
+limits.context_window = 200000
+limits.rate_limit = 50
+cost.input = 0.80
+cost.output = 4.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 0.999
+opts.max_output_tokens = 8192
+
+# ===========================
+# Claude 3 Series (Legacy)
+# ===========================
+
+[[provider.models]]
+name = "claude-3-opus"
+id = "claude-3-opus-20240229"
+limits.input_tokens = 200000
+limits.output_tokens = 4096
+limits.context_window = 200000
+limits.rate_limit = 50
+cost.input = 15.00
+cost.output = 75.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 0.999
+opts.max_output_tokens = 4096
+
+[[provider.models]]
+name = "claude-3-sonnet"
+id = "claude-3-sonnet-20240229"
+limits.input_tokens = 200000
+limits.output_tokens = 4096
+limits.context_window = 200000
+limits.rate_limit = 50
+cost.input = 3.00
+cost.output = 15.00
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 0.999
+opts.max_output_tokens = 4096
+
+[[provider.models]]
+name = "claude-3-haiku"
+id = "claude-3-haiku-20240307"
+limits.input_tokens = 200000
+limits.output_tokens = 4096
+limits.context_window = 200000
+limits.rate_limit = 50
+cost.input = 0.25
+cost.output = 1.25
+cost.per_tokens = 1000000
+cost.currency = "USD"
+capabilities = ["oneshot", "text", "image"]
+opts.temperature = 1.0
+opts.top_p = 0.999
+opts.max_output_tokens = 4096
+
+# ===========================
+# Usage Profiles
+# ===========================
+
+[[profiles]]
+name = "budget"
+description = "Cost-optimized profile for high-volume processing"
+model = "claude-3-5-haiku"
+temperature = 0.7
+max_output_tokens = 2048
+
+[[profiles]]
+name = "quality"
+description = "Quality-optimized profile for complex tasks"
+model = "claude-opus-4"
+temperature = 0.8
+max_output_tokens = 4096
+
+[[profiles]]
+name = "reasoning"
+description = "Reasoning profile for analytical tasks"
+model = "claude-opus-4"
+max_output_tokens = 4096
+anthropic_beta = ["interleaved-thinking-2025-05-14"]
+
+[[profiles]]
+name = "fast"
+description = "Fast response profile"
+model = "claude-3-5-haiku"
+temperature = 0.7
+max_output_tokens = 1024
+
+[[profiles]]
+name = "extended"
+description = "Extended output profile for long-form content"
+model = "claude-3-7-sonnet"
+temperature = 0.8
+max_output_tokens = 64000
+anthropic_beta = ["output-128k-2025-02-19"]

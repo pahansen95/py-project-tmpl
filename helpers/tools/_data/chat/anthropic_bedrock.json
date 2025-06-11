@@ -1,6 +1,0 @@
-{
-  "provider": "Anthropic:Bedrock",
-  "base_url": "https://bedrock-runtime.us-east-1.amazonaws.com",
-  "model": "anthropic.claude-v2",
-  "api_key": "$BEDROCK_API_KEY"
-}

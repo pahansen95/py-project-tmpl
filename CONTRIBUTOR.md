@@ -93,489 +93,471 @@ Use this process to inform what comes next. Favor automation & fast feedback to 
 
 ## Coding Conventions
 
-Python code should be correct, simple, and performant. These conventions establish patterns proven in production systems, balancing software engineering principles with Python's pragmatic culture.
+Python code must be correct, simple, and performant. These conventions are requirements for all contributions. Violations block merge approval.
 
-### Core Philosophy
+Code organization follows five mandatory layers:
+- **Data Layer**: Required structures and state patterns
+- **Contract Layer**: Mandatory interfaces and error handling
+- **Organization Layer**: Required module and package structure
+- **Performance Layer**: Required optimization approaches
+- **Operations Layer**: Mandatory debugging and maintenance patterns
 
-Write straightforward code that leverages Python's strengths. Complexity should emerge from the problem domain, not the implementation approach. Every pattern must earn its place through measurable benefit.
+### Core Requirements
 
-### Data Structure Selection
+Write code that leverages Python's built-in optimizations. Never introduce complexity without measured benefit. All patterns must demonstrate quantifiable improvement.
 
-Choose data structures based on access patterns and performance characteristics. Python's built-in types are highly optimized and should be preferred over custom implementations.
+**The Boundary Principle**: Always validate inputs at system boundaries. Never perform redundant validation within trusted boundaries. This principle is mandatory at: API entry points, module interfaces, external data ingestion, and debug instrumentation.
 
-**Access Pattern Guidelines**:
+### Data Layer: Required Structures and State
 
-- Use `dict` for O(1) key-based lookups
-- Use `set` for O(1) membership testing
-- Use `list` for sequential access and indexing
-- Use `deque` for queue operations (append/popleft)
-- Use `tuple` for immutable sequences
-- Use `dataclass` with `__slots__` for structured data
+The Data Layer establishes fundamental patterns for data representation and state management in Python programs. It defines how information flows through the system while maintaining correctness and performance guarantees.
 
+This layer operates on the principle that proper data structure selection eliminates entire classes of bugs while enabling optimal performance. Each built-in type provides specific algorithmic guarantees - dict offers O(1) lookups, set provides O(1) membership testing, and deque enables efficient queue operations. State management patterns distinguish between immutable public interfaces that ensure predictable behavior and mutable internal implementations that maximize performance.
+
+Core principles:
+- Structure determines available operations
+- Immutability at boundaries prevents action at a distance
+- Internal mutation enables necessary optimizations
+- Memory layout impacts cache performance
+
+The mental model: Choose representations that make correct behavior natural and incorrect behavior impossible.
+
+#### Requirements
+
+All code must follow these data structure and state management rules.
+
+#### Mandatory Patterns
+
+**Required Data Structure Selection**:
 ```python
-class TokenCache:
-    def __init__(self):
-        self._by_type = {}          # Quick lookup by type
-        self._ordered = []          # Maintain insertion order
-        self._seen = set()          # Fast duplicate detection
+# MUST use for O(1) operations
+lookups = {}            # Key-based access
+members = set()         # Membership testing
+queue = deque()         # FIFO operations
+
+# MUST use for sequential access
+items = []              # Indexed access
+immutable = tuple()     # Read-only sequences
+
+# MUST use for structured data
+@dataclass
+class Config:
+    __slots__ = ('host', 'port')  # Required for >1000 instances
+    host: str
+    port: int
 ```
 
-### State Management
-
-Prefer immutable interfaces with efficient internal implementations. Use `__slots__` to reduce memory overhead by 30-40% on frequently instantiated classes.
-
-**Immutable API Pattern**:
-
+**Required State Management**:
 ```python
+from typing import Final
+
+# Public APIs MUST use Final annotations for immutability
 @dataclass
 class Position:
-    """Immutable position in source text."""
-    __slots__ = ('line', 'column', 'offset')
-    line: int
-    column: int
-    offset: int
+    """Immutable position enforced by static analysis."""
+    __slots__ = ('line', 'column', 'offset')  # Required for memory efficiency
+    line: Final[int]
+    column: Final[int]
+    offset: Final[int]
     
     def advance(self, text: str) -> 'Position':
-        # Return new instance for public API
+        # MUST return new instance
         if text == '\n':
             return Position(self.line + 1, 1, self.offset + 1)
         return Position(self.line, self.column + 1, self.offset + 1)
-```
 
-**Internal Mutation Pattern**:
+# REQUIRED: Use typing.Final for zero-cost immutability
+# Static type checkers enforce Final at development time
+# No runtime overhead in production
 
-```python
+# Optional debug-only protection for critical APIs
+@dataclass(frozen=__debug__)  # Frozen only in development
+class CriticalConfig:
+    __slots__ = ('host', 'port')
+    host: Final[str]
+    port: Final[int]
+
+# Internal state MAY mutate for performance
 class _StreamState:
-    """Mutable internal state for performance."""
-    __slots__ = ('tokens', 'position')
+    __slots__ = ('tokens', 'position')  # Required slots
     
     def __init__(self, tokens):
         self.tokens = tokens
-        self.position = 0
+        self.position = 0  # Allowed: internal mutation
 ```
 
-### Error Handling
-
-Validate inputs at system boundaries. Trust internal state after validation. Let Python's built-in exceptions communicate failures naturally.
-
-**Boundary Validation**:
+#### Forbidden Patterns
 
 ```python
-def parse(text: str) -> AST:
-    # Validate once at entry
+# NEVER use mutable defaults
+def process(items=[]):  # FORBIDDEN
+
+# NEVER use dict where set suffices
+seen = {}  # WRONG if only testing membership
+seen = set()  # CORRECT
+
+# NEVER implement built-in functionality
+class MyQueue:  # FORBIDDEN - use collections.deque
+```
+
+### Contract Layer: Required Interfaces and Errors
+
+The Contract Layer establishes explicit agreements between system components through type annotations, validation patterns, and error handling strategies. It ensures that component interactions are well-defined, verifiable, and fail predictably when violated.
+
+This layer implements the boundary principle - comprehensive validation at system entry points followed by trusted operation within validated contexts. Type annotations serve as machine-checkable documentation while exceptions communicate contract violations naturally. The approach balances safety with performance by avoiding redundant checks once data enters the trusted interior.
+
+Key concepts:
+- Types as executable documentation
+- Validation at boundaries only
+- Natural error propagation
+- Gradual typing for practical adoption
+
+The mental model: Define clear contracts, enforce them at boundaries, then operate with confidence in the validated environment.
+
+#### Requirements
+
+Type annotations and validation are mandatory at all boundaries.
+
+### Mandatory Patterns
+
+**Required Boundary Validation**:
+```python
+from typing import Optional, List, Protocol
+
+def parse(text: str) -> AST:  # Type annotations REQUIRED
+    # MUST validate at entry
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
     
-    # Internal functions trust validated input
+    # Internal functions need NOT validate
     tokens = _tokenize(text)
     return _build_ast(tokens)
+
+# MUST use protocols for duck typing
+class Parseable(Protocol):
+    def parse(self) -> Result: ...
 ```
 
-**Natural Error Propagation**:
+**Required Type Coverage**:
+- 100% of public API parameters and returns
+- 100% of dataclass fields
+- 80% minimum of internal functions that cross module boundaries
+- 0% required for single-use private helpers
+
+**Required Error Patterns**:
+```python
+# MUST let errors propagate naturally
+def process_config(data: dict) -> Config:
+    # Let KeyError communicate the problem
+    return Config(
+        name=data['name'],  # Required key
+        options=data.get('options', {})  # Optional with default
+    )
+
+# MUST NOT catch and re-raise without adding value
+try:
+    process()
+except Exception as e:
+    raise  # CORRECT: preserves stack trace
+```
+
+### Forbidden Patterns
 
 ```python
-def process_config(data: dict) -> Config:
-    # Let KeyError naturally describe missing keys
-    return Config(
-        name=data['name'],
-        options=data.get('options', {})
+# NEVER enforce types at runtime
+if not isinstance(arg, int):  # FORBIDDEN except at boundaries
+    raise TypeError
+
+# NEVER use complex generics
+T = TypeVar('T', bound=Hashable)
+Parser = Callable[[List[Token]], Result[AST[Node[T]]]]  # FORBIDDEN
+
+# NEVER annotate if it adds no value
+def _helper(x: Any) -> Any:  # Just omit annotations
+```
+
+### Organization Layer: Required Module Structure
+
+The Organization Layer defines how code is structured into modules and packages to maximize clarity and minimize coupling. It establishes patterns for evolving from simple scripts to complex systems while maintaining navigability and clear dependency relationships.
+
+This layer follows the principle of progressive complexity - start with functions in modules, graduate to classes when state management is needed, and create packages only when modules exceed their single responsibility. Clear boundaries between components are enforced through explicit exports and naming conventions. The approach prevents premature abstraction while supporting natural growth.
+
+Organizational principles:
+- Single responsibility per module
+- Explicit public interfaces via __all__
+- Shallow hierarchies (3 levels maximum)
+- Dependencies flow in one direction
+
+The mental model: Code organization should reflect problem domain structure, not implementation details. Grow complexity only in response to actual needs.
+
+#### Requirements
+
+Code organization must follow these patterns to ensure maintainability.
+
+#### Mandatory Patterns
+
+**Required Module Structure**:
+```python
+# feature.py - MUST follow this order
+
+# 1. Module docstring (required)
+"""Feature X provides Y functionality."""
+
+# 2. Imports (grouped and ordered)
+import standard_library
+import third_party
+from . import local_modules
+
+# 3. Module constants
+DEFAULT_TIMEOUT = 30  # UPPERCASE required
+
+# 4. Public API
+def public_function() -> Result:
+    """Docstring required for public functions."""
+    pass
+
+# 5. Private implementation (underscore prefix required)
+def _private_helper():
+    pass
+
+# 6. Explicit exports (required)
+__all__ = ['public_function', 'DEFAULT_TIMEOUT']
+```
+
+**Required Package Evolution**:
+```python
+# MUST start as single module
+auth.py
+
+# MUST convert to package when >300 lines
+auth/
+  __init__.py      # Public exports only
+  core.py          # Implementation
+  types.py         # Type definitions
+  _internal.py     # Private (underscore required)
+```
+
+### Forbidden Patterns
+
+```python
+# NEVER create deep hierarchies (>3 levels)
+company/platform/services/auth/handlers/  # FORBIDDEN
+
+# NEVER use star imports
+from .module import *  # FORBIDDEN
+
+# NEVER export private members
+__all__ = ['_internal_func']  # FORBIDDEN
+
+# NEVER create circular imports
+# a.py: from .b import x
+# b.py: from .a import y  # FORBIDDEN
+```
+
+### Performance Layer: Required Optimization Approach
+
+The Performance Layer establishes a systematic approach to optimization based on measurement and Python-specific characteristics. It defines a strict hierarchy for performance improvements that prevents premature optimization while ensuring efficient resource utilization.
+
+This layer operates on the principle that algorithmic improvements dominate implementation details, and built-in operations leverage C-level optimizations unavailable to pure Python code. The Global Interpreter Lock (GIL) fundamentally shapes concurrency strategies - asyncio for I/O-bound work, multiprocessing for CPU-bound tasks. All optimization decisions must be driven by profiling data rather than intuition.
+
+Performance hierarchy:
+- Algorithm selection (O(n) vs O(n²))
+- Built-in operations (C-level speed)
+- Memory layout (__slots__, data locality)
+- Concurrency model (async vs processes)
+
+The mental model: Measure first, optimize the bottleneck, leverage Python's strengths. Accept when Python isn't the right tool rather than contorting the language.
+
+#### Requirements
+
+Performance optimization must follow this strict hierarchy. Never skip levels.
+
+#### Mandatory Patterns
+
+**Required Optimization Order**:
+```python
+# 1. MUST optimize algorithms first
+# Bad: O(n²)
+for item in items:
+    if item in list_items:  # O(n) lookup
+        process(item)
+
+# Good: O(n)
+item_set = set(list_items)  # O(n) setup
+for item in items:
+    if item in item_set:    # O(1) lookup
+        process(item)
+
+# 2. MUST use built-in operations
+text = ''.join(parts)       # REQUIRED over += loop
+total = sum(numbers)        # REQUIRED over manual loop
+found = any(condition(x) for x in items)  # Short-circuits
+
+# 3. MUST use __slots__ for frequently instantiated classes
+class Token:
+    __slots__ = ('type', 'value', 'position')  # Saves 37% memory
+    
+# 4. MUST use appropriate concurrency
+# I/O-bound: asyncio required
+async def fetch_all(urls):
+    async with aiohttp.ClientSession() as session:
+        return await asyncio.gather(
+            *[fetch(session, url) for url in urls]
+        )
+
+# CPU-bound: multiprocessing required
+def parallel_compute(data):
+    with multiprocessing.Pool() as pool:
+        return pool.map(compute, data)
+```
+
+**Required Profiling**:
+```python
+# MUST profile before optimization
+# Acceptable profiling methods:
+# - cProfile for development
+# - py-spy for production (0% overhead)
+# - perf_counter() for specific operations
+
+# MUST include measurement in optimization PRs
+# Before: 3.4s (provide profiler output)
+# After: 1.2s (provide profiler output)
+# Method: <specific change made>
+```
+
+**Required Scale-Based Decisions**:
+```python
+# MUST choose architecture based on data scale
+if data_size < 1_000_000:      # < 1MB: Standard Python
+    process_simple(data)
+elif data_size < 100_000_000:  # < 100MB: Add caching  
+    process_with_cache(data)
+elif data_size < 1_000_000_000: # < 1GB: Stream processing
+    process_streaming(data)
+else:                           # > 1GB: Specialized tools
+    # MUST use NumPy/Pandas/Polars for data >1GB
+    raise ValueError("Use specialized tools for data >1GB")
+```
+
+### Forbidden Patterns
+
+```python
+# NEVER micro-optimize without profiling
+x = x + 1  # This is fine
+x += 1     # Don't change for "performance"
+
+# NEVER use threads for CPU-bound work
+Thread(target=cpu_intensive_task)  # FORBIDDEN - use Process
+
+# NEVER implement premature caching
+@lru_cache(maxsize=None)  # FORBIDDEN without proven need
+def simple_function(x):
+    return x * 2
+```
+
+### Operations Layer: Required Debug and Maintenance
+
+The Operations Layer provides comprehensive observability and testing patterns that enable debugging and maintenance without impacting production performance. It establishes zero-overhead instrumentation that remains dormant until explicitly activated for troubleshooting.
+
+This layer implements event-based observability where structured events flow to pluggable handlers for logging, metrics, or analysis. The approach ensures that debugging capabilities are always present but never burden the system unless needed. Testing patterns focus on behavioral verification rather than implementation details, ensuring tests remain stable as code evolves.
+
+Operational principles:
+- Zero cost when disabled
+- Structured event emission
+- Context propagation via contextvars
+- Behavioral testing over implementation
+- Bounded resource usage
+
+The mental model: Build in comprehensive debugging from the start, but ensure it disappears completely when not needed. Test what the system does, not how it does it.
+
+#### Requirements
+
+All code must support zero-overhead debugging and behavioral testing.
+
+#### Mandatory Patterns
+
+**Required Instrumentation**:
+```python
+import instrumentation
+
+# MUST have zero overhead when disabled
+if not handlers:  # Single check, early return
+    return
+
+# MUST use structured events
+instrumentation.emit('rule.enter', 'expression')
+
+# MUST use context managers for scope
+with instrumentation.parsing_rule('function_def'):
+    instrumentation.emit('parse.start', 'parsing function')
+
+# MUST support categories
+instrumentation.enable_categories('lex')  # Selective debugging
+
+# REQUIRED: Use contextvars for trace propagation
+import contextvars
+
+trace_id = contextvars.ContextVar('trace_id')
+parse_depth = contextvars.ContextVar('parse_depth', default=0)
+
+# Context automatically propagates through async calls
+with instrumentation.set_context(trace_id='abc123'):
+    # All nested operations include trace_id
+    await parse_async(source)
+
+# Production MUST use sampling
+if PRODUCTION:
+    handler = instrumentation.create_sampling_handler(
+        0.01,  # 1% sampling required
+        instrumentation.create_metrics_handler()[0]
     )
 ```
 
-### Type Annotations
-
-Apply type hints to public APIs and data structures. Use gradual typing to balance clarity with flexibility.
-
-**Public API Typing**:
-
+**Required Testing Patterns**:
 ```python
-from typing import Optional, List, Iterator
-
-def tokenize(text: str) -> List[Token]:
-    """Full type information for public interfaces."""
-    return list(_generate_tokens(text))
-
-def _generate_tokens(text: str) -> Iterator[Token]:
-    # Internal functions can omit types if obvious
-    position = 0
-    while position < len(text):
-        yield _next_token(text, position)
-```
-
-**Protocol Definitions**:
-
-```python
-from typing import Protocol
-
-class Parseable(Protocol):
-    """Define expected interfaces without inheritance."""
-    def parse(self) -> Any: ...
-```
-
-### Performance Patterns
-
-Write standard patterns that Python can optimize. Use generators for memory efficiency. Profile before optimizing.
-
-**Generator-Based Processing**:
-
-```python
-def process_large_dataset(path: Path) -> Iterator[Result]:
-    """Memory-efficient streaming processing."""
-    with open(path) as file:
-        for line in file:
-            if data := parse_line(line):
-                yield process_record(data)
-```
-
-**Built-in Optimization**:
-
-```python
-# Prefer built-in operations
-text = ''.join(parts)                    # Not: text = '' + part1 + part2
-counts = Counter(items)                  # Not: manual counting loop
-filtered = [x for x in items if valid(x)]  # Not: manual append loop
-```
-
-### Code Organization
-
-Structure code to minimize complexity. Prefer modules and functions over classes. Keep inheritance shallow.
-
-**When to Use Classes**:
-
-Classes are appropriate when you need:
-
-1. **Stateful objects** - Managing mutable state across method calls
-2. **Resource management** - Implementing context managers for cleanup
-3. **Polymorphism** - Multiple implementations of the same interface
-4. **Data encapsulation** - Bundling related data with behavior
-
-```python
-# Good use of class - stateful parser
-class Parser:
-    """Maintains parsing state across multiple operations."""
-    def __init__(self, tokens: List[Token]):
-        self._tokens = tokens
-        self._position = 0
-    
-    def parse(self) -> AST:
-        # Multiple methods operate on shared state
-        return self._parse_program()
-
-# Good use of class - resource management
-class DatabaseConnection:
-    """Manages connection lifecycle."""
-    def __enter__(self):
-        self._conn = connect()
-        return self._conn
-    
-    def __exit__(self, *args):
-        self._conn.close()
-```
-
-**When to Use Modules + Functions**:
-
-Prefer module-level functions when:
-
-1. **Stateless operations** - Pure transformations
-2. **Single responsibility** - One clear purpose
-3. **Reusable utilities** - Shared across modules
-4. **Simple workflows** - Linear processing
-
-```python
-# tokenizer.py - Stateless operations as functions
-def tokenize(text: str) -> List[Token]:
-    """Transform text to tokens - no state needed."""
-    return list(_generate_tokens(text))
-
-def _generate_tokens(text: str) -> Iterator[Token]:
-    """Internal generator for memory efficiency."""
-    position = 0
-    while position < len(text):
-        token = _match_token(text, position)
-        yield token
-        position += token.length
-
-# utils.py - Reusable utilities
-def normalize_path(path: str) -> Path:
-    """Pure function - same input always gives same output."""
-    return Path(path).resolve()
-```
-
-**Module Structure Pattern**:
-
-```python
-# feature.py - Organize by domain capability
-
-# Public API functions at top
-def process_data(input_path: Path) -> Result:
-    """Main entry point for data processing."""
-    data = load_data(input_path)
-    validated = validate_data(data)
-    return transform_data(validated)
-
-def validate_data(data: RawData) -> ValidData:
-    """Secondary public function."""
-    # Implementation
-
-# Internal helpers prefixed with underscore
-def _parse_record(line: str) -> Record:
-    """Internal parsing logic."""
-    # Implementation
-
-# Constants and configuration
-DEFAULT_ENCODING = 'utf-8'
-SUPPORTED_FORMATS = {'json', 'csv', 'tsv'}
-```
-
-### Observability
-
-Build in lightweight debugging and monitoring from the start. Use lazy evaluation to minimize overhead.
-
-**Structured Logging Pattern**:
-
-```python
-import logging
-import contextvars
-from typing import Any, Dict
-
-# Thread-local context for correlation
-request_id: contextvars.ContextVar[str] = contextvars.ContextVar('request_id')
-
-class StructuredLogger:
-    """Add structured context to all log messages."""
-    
-    def __init__(self, name: str):
-        self.logger = logging.getLogger(name)
-        self._base_context = {'component': name}
-    
-    def _add_context(self, extra: Dict[str, Any]) -> Dict[str, Any]:
-        """Merge base context, request context, and extra fields."""
-        context = self._base_context.copy()
-        
-        # Add correlation ID if present
-        if rid := request_id.get(None):
-            context['request_id'] = rid
-        
-        context.update(extra)
-        return {'extra': context}
-    
-    def info(self, msg: str, **kwargs):
-        self.logger.info(msg, **self._add_context(kwargs))
-
-# Usage
-logger = StructuredLogger(__name__)
-
-def process_request(request):
-    # Set correlation ID for this request
-    request_id.set(request.id)
-    
-    logger.info("Processing request", 
-                user_id=request.user_id,
-                path=request.path)
-```
-
-**Metrics Collection Pattern**:
-
-```python
-from collections import defaultdict
-from contextlib import contextmanager
-from time import perf_counter
-import atexit
-
-class Metrics:
-    """Thread-safe metrics collection with zero allocation overhead."""
-    
-    # Use module-level storage for efficiency
-    _counters = defaultdict(int)
-    _timers = defaultdict(lambda: {'count': 0, 'total': 0.0})
-    
-    @classmethod
-    def inc(cls, name: str, value: int = 1) -> None:
-        """Increment counter - minimal overhead."""
-        cls._counters[name] += value
-    
-    @classmethod
-    @contextmanager
-    def timer(cls, name: str):
-        """Time operation with context manager."""
-        start = perf_counter()
-        try:
-            yield
-        finally:
-            elapsed = perf_counter() - start
-            stats = cls._timers[name]
-            stats['count'] += 1
-            stats['total'] += elapsed
-    
-    @classmethod
-    def get_stats(cls) -> Dict[str, Any]:
-        """Get all metrics for reporting."""
-        return {
-            'counters': dict(cls._counters),
-            'timers': {
-                name: {
-                    'count': stats['count'],
-                    'total': stats['total'],
-                    'average': stats['total'] / stats['count'] if stats['count'] else 0
-                }
-                for name, stats in cls._timers.items()
-            }
-        }
-
-# Register cleanup
-atexit.register(lambda: logger.info("Final metrics", **Metrics.get_stats()))
-
-# Usage
-def handle_request(request):
-    Metrics.inc('requests_received')
-    
-    with Metrics.timer('request_processing'):
-        result = process(request)
-    
-    Metrics.inc('requests_completed')
-    return result
-```
-
-**Debug Tracing Pattern**:
-
-```python
-from contextlib import contextmanager
-from functools import wraps
-
-# Development-only tracing
-if __debug__:
-    _trace_stack = []
-    
-    @contextmanager
-    def trace(operation: str, **context):
-        """Trace execution in debug mode only."""
-        entry = {'op': operation, 'context': context, 'start': perf_counter()}
-        _trace_stack.append(entry)
-        
-        try:
-            yield
-        except Exception as e:
-            # Log error with full context
-            logger.error("Error in %s: %s", operation, e,
-                        stack=[t['op'] for t in _trace_stack])
-            raise
-        finally:
-            entry['duration'] = perf_counter() - entry['start']
-            _trace_stack.pop()
-            
-            # Log slow operations
-            if entry['duration'] > 0.1:
-                logger.warning("Slow operation: %s took %.2fs",
-                             operation, entry['duration'])
-else:
-    # No-op in production
-    @contextmanager
-    def trace(operation: str, **context):
-        yield
-
-# Usage - compiles out in production
-def parse_expression(tokens):
-    with trace('parse_expression', token_count=len(tokens)):
-        return _parse_expr_impl(tokens)
-```
-
-**Production Sampling Pattern**:
-
-```python
-import random
-from functools import wraps
-
-def sample_trace(rate: float = 0.01):
-    """Decorator for sampled tracing in production."""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            # Sample at specified rate
-            should_trace = random.random() < rate
-            
-            if should_trace:
-                with Metrics.timer(f'{func.__module__}.{func.__name__}'):
-                    logger.debug("Executing %s", func.__name__)
-                    result = func(*args, **kwargs)
-                    logger.debug("Completed %s", func.__name__)
-                    return result
-            else:
-                return func(*args, **kwargs)
-        
-        return wrapper
-    return decorator
-
-# Usage - 1% sampling in production
-@sample_trace(rate=0.01)
-def expensive_operation(data):
-    return process_data(data)
-```
-
-**Error Context Pattern**:
-
-```python
-class ContextualError(Exception):
-    """Exception that carries debugging context."""
-    
-    def __init__(self, message: str, **context):
-        super().__init__(message)
-        self.context = context
-    
-    def __str__(self):
-        context_str = ', '.join(f"{k}={v}" for k, v in self.context.items())
-        return f"{super().__str__()} [{context_str}]"
-
-# Usage
-def parse_token(token, position):
-    if token.type == 'INVALID':
-        raise ContextualError(
-            "Invalid token",
-            token_type=token.type,
-            position=position,
-            line=token.line,
-            column=token.column
-        )
-```
-
-**Observability Implementation Checklist**:
-
-1. **Always use structured logging** - Include correlation IDs and context
-2. **Implement metrics from the start** - Count operations and time critical paths
-3. **Use conditional compilation** - `__debug__` for development-only overhead
-4. **Sample in production** - Trace a percentage of operations to control overhead
-5. **Capture error context** - Include relevant state in exceptions
-6. **Export metrics on shutdown** - Use atexit handlers for final reporting
-7. **Keep overhead minimal** - Lazy formatting, conditional evaluation
-
-### Testing Patterns
-
-Write tests that verify behavior, not implementation. Focus on boundary conditions and integration points.
-
-**Behavioral Testing**:
-
-```python
-def test_parser_handles_empty_input():
-    # Test behavior, not internals
+# MUST test behavior, not implementation
+def test_parser_handles_empty():
     result = parse("")
     assert result == EmptyAST()
 
-def test_parser_validates_input():
-    # Verify boundary validation
+# MUST test boundaries
+def test_validates_input():
     with pytest.raises(TypeError, match="Expected str"):
         parse(123)
+
+# MUST NOT test private methods
+def test_internal_state():  # FORBIDDEN
+    assert parser._cache == {}
 ```
 
-### Convention Summary
+**Required Async Logging**:
+```python
+# MUST use QueueHandler for high-volume logging
+from logging.handlers import QueueHandler, QueueListener
 
-1. **Choose appropriate data structures** - Use built-ins for their optimized performance
-2. **Validate at boundaries** - Check inputs once, trust internal state
-3. **Type public interfaces** - Document contracts without runtime overhead
-4. **Write boring code** - Standard patterns enable Python optimizations
-5. **Organize simply** - Minimize layers and indirection
-6. **Debug efficiently** - Lazy logging and compile-time assertions
-7. **Test behavior** - Verify what code does, not how
+handler = QueueHandler(queue.Queue())
+listener = QueueListener(queue, *handlers)
+listener.start()  # Non-blocking
 
-These conventions produce Python code that is both correct and performant, achieving software engineering goals through Python-specific mechanisms.
+# MUST clean up
+import atexit
+atexit.register(listener.stop)
+```
+
+### Forbidden Patterns
+
+```python
+# NEVER log in tight loops without guards
+for item in million_items:
+    log.debug(f"Processing {item}")  # FORBIDDEN
+
+# NEVER use synchronous logging in performance paths
+handler = FileHandler('app.log')  # Use QueueHandler instead
+
+# NEVER format eagerly
+log.debug(f"Result: {expensive_compute()}")  # FORBIDDEN
+log.debug("Result: %s", expensive_compute)   # Use lazy %
+```
 
 ## Environment & Tooling
 
@@ -584,4 +566,3 @@ These conventions produce Python code that is both correct and performant, achie
 ## Further Reading
 
 > Fill in as necessary
-

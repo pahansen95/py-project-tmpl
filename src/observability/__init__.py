@@ -85,16 +85,6 @@ __all__ = [
   "ObservabilityContext",
   "ObservabilityConfig",
   "create_observability",
-  # Domain classes
-  "LoggingDomain",
-  "TracingDomain",
-  "MetricsDomain",
-  # Domain objects
-  "Logger",
-  "Span",
-  "Counter",
-  "Gauge",
-  "Histogram",
   # Handler classes
   "PrintHandler",
   "JsonHandler",

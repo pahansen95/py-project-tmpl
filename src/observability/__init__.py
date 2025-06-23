@@ -48,25 +48,11 @@ When no handlers are attached, the entire system reduces to a single boolean che
 ensuring production code pays no performance penalty for unused instrumentation.
 """
 
-from typing import Any
-
 # Context infrastructure
-from .context import ObservabilityContext
-from .config import (
+from .core import (
+  ObservabilityContext,
   ObservabilityConfig,
   create_observability,
-)
-
-# Import domain classes from subpackage
-from .domains import (
-  LoggingDomain,
-  TracingDomain,
-  MetricsDomain,
-  Logger,
-  Span,
-  Counter,
-  Gauge,
-  Histogram,
 )
 
 # Handler imports

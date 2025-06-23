@@ -26,7 +26,7 @@ simultaneously.
 from typing import Dict, Final, Optional, Tuple
 import time
 
-from ..context import ObservabilityContext
+from ..core import ObservabilityContext
 
 # Event schema
 METRIC_PREFIX: Final[str] = "metric"

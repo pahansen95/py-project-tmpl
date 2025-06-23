@@ -1,16 +1,37 @@
 """
-Context-based observability infrastructure.
+Core observability infrastructure.
 
-Encapsulates all mutable state within explicit context objects, eliminating
-global state and enabling isolated testing. Each context maintains its own
-handlers, configuration, and timing information.
+Provides context-based event emission with immutable configuration. All observability
+state is encapsulated within explicit context objects, eliminating global state and
+enabling isolated testing.
 """
 
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Set
 
 from .types import EventDict, EventHandler, CategorySet
+
+
+@dataclass(frozen=True)
+class ObservabilityConfig:
+  """
+  Immutable configuration for observability context.
+
+  Defines all aspects of observability behavior at initialization time.
+  Runtime mutation is not supported - create a new context for different
+  configuration.
+  """
+
+  handlers: List[EventHandler] = field(default_factory=list)
+  sampling_rate: float = 1.0
+  enabled_categories: Set[str] = field(default_factory=set)
+
+  def __post_init__(self):
+    """Validate configuration."""
+    if not 0.0 <= self.sampling_rate <= 1.0:
+      raise ValueError(f"Sampling rate must be between 0 and 1, got {self.sampling_rate}")
 
 
 class ObservabilityContext:
@@ -31,7 +52,7 @@ class ObservabilityContext:
     "_category_cache",
   )
 
-  def __init__(self, config: Optional["ObservabilityConfig"] = None):
+  def __init__(self, config: Optional[ObservabilityConfig] = None):
     """
     Initialize context with optional configuration.
 
@@ -49,7 +70,7 @@ class ObservabilityContext:
     if config:
       self._apply_config(config)
 
-  def _apply_config(self, config: "ObservabilityConfig") -> None:
+  def _apply_config(self, config: ObservabilityConfig) -> None:
     """Apply configuration to context."""
     self._sampling_rate = config.sampling_rate
     if config.enabled_categories:
@@ -185,3 +206,22 @@ class ObservabilityContext:
         except Exception:
           # Suppress shutdown errors
           pass
+
+
+def create_observability(config: ObservabilityConfig) -> ObservabilityContext:
+  """
+  Factory function to create configured observability context.
+
+  Args:
+      config: Configuration to apply
+
+  Returns:
+      Configured ObservabilityContext instance
+  """
+  context = ObservabilityContext(config)
+
+  # Attach handlers directly from config
+  for handler in config.handlers:
+    context.attach_handler(handler)
+
+  return context

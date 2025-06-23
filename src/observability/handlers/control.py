@@ -9,6 +9,7 @@ import queue
 import random
 import threading
 import time
+import sys
 from typing import Callable, Optional
 
 from ..types import EventDict, EventHandler

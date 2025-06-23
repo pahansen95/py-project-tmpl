@@ -28,7 +28,7 @@ from typing import Any, Final, Iterator, Optional
 import time
 import threading
 
-from ..context import ObservabilityContext
+from ..core import ObservabilityContext
 
 # Event schema
 SPAN_PREFIX: Final[str] = "span"

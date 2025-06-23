@@ -40,7 +40,7 @@ verbosity across different subsystems.
 
 from typing import Any, Dict, Final
 
-from ..context import ObservabilityContext
+from ..core import ObservabilityContext
 
 # Severity levels as constants
 CRITICAL: Final[int] = 50

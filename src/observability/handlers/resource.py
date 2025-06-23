@@ -4,6 +4,7 @@ Resource-managed handlers for persistent connections.
 Handlers that maintain long-lived resources across multiple events.
 """
 
+import sys
 import atexit
 import json
 import threading

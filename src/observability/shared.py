@@ -70,3 +70,8 @@ class SharedContext:
     Convenience method that delegates to the context.
     """
     cls.get().emit(event_type, value, **metadata)
+
+
+__all__ = [
+  "SharedContext",
+]

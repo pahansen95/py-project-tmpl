@@ -55,6 +55,9 @@ from .core import (
   create_observability,
 )
 
+# Shared Context
+from .shared import SharedContext
+
 # Handler imports
 from .handlers import (
   PrintHandler,
@@ -85,6 +88,8 @@ __all__ = [
   "ObservabilityContext",
   "ObservabilityConfig",
   "create_observability",
+  # Shared Context
+  "SharedContext",
   # Handler classes
   "PrintHandler",
   "JsonHandler",

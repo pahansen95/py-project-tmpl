@@ -51,42 +51,6 @@ def _generate_span_id() -> str:
     return f"{_span_counter:x}"
 
 
-class TracingDomain:
-  """
-  Context-bound tracing domain.
-
-  Provides factory for creating spans bound to a specific observability context.
-  """
-
-  __slots__ = ("_context",)
-
-  def __init__(self, context: ObservabilityContext):
-    """
-    Initialize tracing domain with context.
-
-    Args:
-        context: ObservabilityContext to emit events through
-    """
-    self._context = context
-
-  def span(self, operation: str, **attributes: Any) -> "Span":
-    """
-    Create a new span for tracking execution.
-
-    Args:
-        operation: Operation name
-        **attributes: Additional span attributes
-
-    Returns:
-        Span context manager
-    """
-    return Span(operation, self._context, **attributes)
-
-  def get_current_span(self) -> Optional["Span"]:
-    """Get the currently active span."""
-    return current_span.get()
-
-
 class Span:
   """
   Execution span tracking timing and relationships.

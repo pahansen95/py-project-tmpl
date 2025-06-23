@@ -66,37 +66,6 @@ LEVEL_TO_EVENT: Final[Dict[int, str]] = {
 }
 
 
-class LoggingDomain:
-  """
-  Context-bound logging domain.
-
-  Provides factory for creating loggers bound to a specific observability context.
-  """
-
-  __slots__ = ("_context",)
-
-  def __init__(self, context: ObservabilityContext):
-    """
-    Initialize logging domain with context.
-
-    Args:
-        context: ObservabilityContext to emit events through
-    """
-    self._context = context
-
-  def get_logger(self, name: str) -> "Logger":
-    """
-    Get a named logger instance.
-
-    Args:
-        name: Logger name using dot notation (e.g., 'myapp.module')
-
-    Returns:
-        Logger instance bound to the context
-    """
-    return Logger(name, self._context)
-
-
 class Logger:
   """
   Named logger that emits structured log events.

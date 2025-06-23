@@ -6,7 +6,11 @@ The Event-Driven Observability Architecture unifies logging, tracing, and metric
 
 ## Mental Model
 
-Observability flows through your application as structured events emitted from explicit contexts:
+Observability flows through your application as structured events emitted from explicit contexts. Each domain captures different temporal characteristics of system behavior:
+
+- **Logging**: Discrete points in time (forensic snapshots)
+- **Tracing**: Durations with relationships (execution journeys)
+- **Metrics**: Time series for aggregation (quantitative trends)
 
 ```
 Application Boundary
@@ -20,6 +24,11 @@ Handler Tree
     ├─→ Control (filtering/sampling)
     └─→ Composite (coordination)
 ```
+
+The architecture answers three fundamental questions:
+- "What happened?" → Logging domain
+- "How did it flow?" → Tracing domain
+- "How much/often?" → Metrics domain
 
 The architecture provides two access patterns:
 - **Explicit Contexts**: Direct instantiation for testing and isolation
@@ -140,7 +149,15 @@ operation_id = contextvars.ContextVar("operation_id", default=None)
 
 ## Domain Layer
 
-Domains provide specialized APIs that emit structured events:
+Domains provide specialized APIs that emit structured events. Each domain captures different temporal characteristics of system behavior.
+
+### Domain Differentiation
+
+| Domain | Temporal Model | Data Structure | Primary Question |
+|--------|---------------|----------------|------------------|
+| Logging | Discrete points | Independent events | "What happened?" |
+| Tracing | Durations with relationships | Hierarchical spans | "How did it flow?" |
+| Metrics | Time series | Aggregatable values | "How much/often?" |
 
 ### Direct Instantiation
 
@@ -168,6 +185,70 @@ LOG_20: Final[str] = "log.20"  # INFO level
 SPAN_START: Final[str] = "span.start"
 SPAN_END: Final[str] = "span.end"
 ```
+
+## Domain Selection Guide
+
+### When to Use Each Domain
+
+Choose domains based on the questions you need to answer about system behavior.
+
+**Use Logging when:**
+- Investigating specific incidents with rich context
+- Building audit trails requiring who/what/when
+- Capturing detailed state snapshots for debugging
+- Recording business events that stand alone
+
+**Use Tracing when:**
+- Understanding request flow through services
+- Identifying performance bottlenecks
+- Analyzing component dependencies
+- Correlating distributed operations
+
+**Use Metrics when:**
+- Monitoring system health trends
+- Setting up threshold-based alerts
+- Capacity planning from historical patterns
+- Tracking quantitative KPIs
+
+### The Overlap Zone
+
+Some scenarios benefit from multiple domains:
+
+```python
+# Log the business fact
+logger.info("Order submitted", order_id=123, amount=99.99)
+
+# Trace the execution mechanics
+with Span("process_order", order_id=123) as span:
+    with Span("validate_inventory"):
+        # Check stock
+    with Span("charge_payment"):
+        # Process payment
+```
+
+The log captures the business event. The trace captures how we processed it.
+
+## Creating New Domains
+
+Introduce a new domain when encountering novel temporal patterns that existing domains cannot efficiently capture.
+
+### Domain Creation Criteria
+
+1. **Novel Event Structure** - Data relationships not captured by existing domains
+2. **Specialized Processing** - Unique transformation requirements
+3. **Different Consumption** - New query patterns or visualizations
+4. **Domain-Specific Context** - Specialized enrichment needs
+
+Example: A profiling domain might emit sampled stack traces - neither logs nor traces, but statistical performance snapshots with their own temporal characteristics.
+
+### Domain Design Principles
+
+When creating a domain:
+- Define the core temporal model
+- Identify primary consumption patterns
+- Design hierarchical event types
+- Plan for schema evolution
+- Maintain zero-overhead guarantees
 
 ## Handler Layer
 
@@ -223,10 +304,9 @@ For infrastructure concerns using ambient access:
 from observability.shared import SharedContext
 from observability.domains.logging import Logger
 
-# Module-level logger via shared context
 logger = Logger(__name__, SharedContext.get())
 
-def get_from_cache(key: str) -> Optional[Any]:
+def get_cached_value(key: str) -> Optional[Any]:
     logger.debug("Cache lookup", key=key)
     # Implementation
 ```
@@ -236,47 +316,16 @@ def get_from_cache(key: str) -> Optional[Any]:
 For business logic requiring isolation:
 
 ```python
-# domain/payment_processor.py
-from observability.domains.logging import Logger
-from observability.domains.metrics import Counter
-
-class PaymentProcessor:
-    def __init__(self, gateway: Gateway, obs: ObservabilityContext):
-        self.gateway = gateway
-        self.logger = Logger('audit.payments', obs)
-        self.counter = Counter('payments.total', obs)
+class OrderService:
+    def __init__(self, obs_context: ObservabilityContext):
+        self.logger = Logger('orders', obs_context)
+        self.metrics = Counter('orders_processed', obs_context)
     
-    def process_payment(self, payment: Payment) -> Result:
-        self.logger.info('Payment initiated', 
-                        amount=payment.amount,
-                        user_id=payment.user_id)
-        
-        result = self.gateway.charge(payment)
-        self.counter.increment(
-            status='success' if result.ok else 'failure'
-        )
-        return result
-```
-
-### Testing Patterns
-
-Explicit contexts enable perfect isolation:
-
-```python
-def test_payment_logs_amount():
-    # Isolated test context
-    buffer = BufferHandler()
-    config = ObservabilityConfig(handlers=[buffer])
-    test_context = ObservabilityContext(config)
-    test_context.start()
-    
-    # Inject test context
-    processor = PaymentProcessor(MockGateway(), test_context)
-    processor.process_payment(Payment(amount=100.0))
-    
-    # Verify events
-    events = buffer.get_events()
-    assert events[0]['amount'] == 100.0
+    def process_order(self, order_id: str):
+        with Span('process_order', self.obs_context) as span:
+            span.set_attribute('order_id', order_id)
+            self.logger.info("Processing order", order_id=order_id)
+            self.metrics.increment()
 ```
 
 ## Initialization Patterns
@@ -289,12 +338,8 @@ from observability import ObservabilityConfig, SharedContext
 from observability.handlers import JsonHandler
 
 def main():
-    # Initialize shared context once
-    config = ObservabilityConfig(
-        handlers=[JsonHandler(sys.stderr)],
-        sampling_rate=0.1
-    )
-    SharedContext.setup(config)
+    # Initialize shared context once w/ sane defaults (print to stderr)
+    SharedContext.setup()
     
     # Application runs with ambient access
     run_application()
@@ -313,18 +358,27 @@ class DataProcessor:
 
 ## Implementation Strategy
 
-### Phase 1: Shared Context
-```python
-# Initialize at entry point
-SharedContext.setup(config)
+### Phase 1: Single Domain Adoption
+Start with the domain matching your primary observability need:
+- Debugging focus → Logging
+- Performance focus → Tracing
+- Monitoring focus → Metrics
 
-# Use throughout via SharedContext.get()
+Initialize with SharedContext for convenience:
+```python
+SharedContext.setup()
 logger = Logger('myapp', SharedContext.get())
 ```
 
-### Phase 2: Explicit Contexts
+### Phase 2: Domain Expansion
+Add complementary domains as needs emerge:
+- Logging + Tracing for distributed debugging
+- Metrics + Tracing for performance optimization
+- All three for comprehensive observability
+
+### Phase 3: Explicit Contexts
+Create isolated contexts where needed:
 ```python
-# Create isolated contexts where needed
 special_context = ObservabilityContext(special_config)
 special_context.start()
 
@@ -332,17 +386,13 @@ special_context.start()
 service = Service(special_context)
 ```
 
-### Phase 3: Full Adoption
-```python
-# Shared for system concerns
-system_logger = Logger(__name__, SharedContext.get())
-
-# Explicit for domain logic
-class BusinessService:
-    def __init__(self, obs: ObservabilityContext):
-        self.metrics = Counter('business', obs)
-```
+### Phase 4: Custom Domains
+Identify novel temporal patterns in your system that warrant new domains. Follow the domain creation criteria and design principles.
 
 ## Conclusion
 
-The Event-Driven Observability Architecture provides a foundation balancing explicit dependency management with practical convenience. The SharedContext singleton acknowledges the reality of ambient logging needs while maintaining the option for explicit context injection where isolation matters. The direct instantiation approach keeps the API surface minimal while enabling sophisticated handler composition through simple class construction.
+The Event-Driven Observability Architecture provides a foundation for capturing different temporal characteristics of system behavior. By understanding domains as distinct temporal models rather than just API variations, teams can select the right observability tool for each question they need to answer.
+
+The architecture balances explicit dependency management with practical convenience through the dual context pattern. The SharedContext singleton acknowledges the reality of ambient logging needs while maintaining the option for explicit context injection where isolation matters. 
+
+The unified event pipeline preserves domain semantics while enabling cross-domain correlation and consistent processing. The zero-overhead guarantee ensures observability can be pervasive without performance penalty, making comprehensive instrumentation practical for production systems.

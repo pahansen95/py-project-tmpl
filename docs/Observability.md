@@ -2,178 +2,273 @@
 
 ## Executive Summary
 
-The Event-Driven Observability Architecture unifies logging, tracing, and metrics collection through a context-based event pipeline. This design provides both explicit dependency injection for testability and convenient ambient access for common cases. The architecture distinguishes between system observability (infrastructure concerns) and domain observability (business logic), allowing appropriate patterns for each while maintaining zero-overhead characteristics.
+The Event-Driven Observability Architecture unifies logging, tracing, and metrics collection through a context-based event pipeline. This design provides explicit dependency injection for testability while offering a shared context singleton for convenience. The architecture distinguishes between system observability (infrastructure concerns) and domain observability (business logic), maintaining zero-overhead characteristics when instrumentation is disabled.
 
 ## Mental Model
 
-Observability is a **capability** that flows through your application via explicit contexts, with convenient defaults for common cases:
+Observability flows through your application as structured events emitted from explicit contexts:
 
 ```
 Application Boundary
-    ↓ initialize
-ObservabilityContext ──→ Default Context (optional)
-    ↓ pass/inject          ↓ ambient access
-Domain Objects          System Modules
-    ↓ emit                 ↓ emit
-Event Pipeline
-    ↓ dispatch
+    ↓ 
+ObservabilityContext ←── SharedContext (singleton)
+    ↓ emit()              ↑ thread-safe access
+Domain Objects ──────────→ Events
+    ↓
 Handler Tree
+    ├─→ Sink (I/O operations)
+    ├─→ Control (filtering/sampling)
+    └─→ Composite (coordination)
 ```
 
-The architecture supports two complementary patterns:
-- **Explicit Contexts**: For domain logic, testing, and isolation
-- **Ambient Defaults**: For system observability and convenience
+The architecture provides two access patterns:
+- **Explicit Contexts**: Direct instantiation for testing and isolation
+- **Shared Context**: Singleton pattern for convenient ambient access
 
 ## Architectural Overview
 
-The architecture consists of four primary layers:
+The system implements a four-layer event processing pipeline:
 
-1. **Context Layer**: Manages observability state and configuration
-2. **Core Event System**: Routes events from producers to consumers
-3. **Domain API Layer**: Provides specialized interfaces for different concerns
-4. **Handler Pipeline**: Processes events for output and analysis
+1. **Context Layer**: Encapsulates mutable state and configuration
+2. **Event System**: Routes structured events with zero allocation
+3. **Domain Layer**: Translates domain operations into events
+4. **Handler Layer**: Processes events through composable trees
 
 ```
 ┌─────────────────────────────────────────────────┐
 │              Application Code                   │
 ├─────────────────────────────────────────────────┤
-│   Explicit Context  │  Default Context          │ ← Context Layer
+│ ObservabilityContext │ SharedContext.get()      │ ← Context Layer
 ├─────────────────────────────────────────────────┤
-│  Logging │ Tracing │ Metrics (Domain APIs)     │ ← Domain Layer
+│  Logger │ Span │ Counter (Domain Objects)       │ ← Domain Layer
 ├─────────────────────────────────────────────────┤
-│            Core Event System                    │ ← Event Router
+│         EventDict (type, value, metadata)       │ ← Event System
 ├─────────────────────────────────────────────────┤
-│         Handler Pipeline & Processing           │ ← Event Consumers
+│    Handler Tree (Sink/Control/Composite)        │ ← Handler Layer
 └─────────────────────────────────────────────────┘
 ```
 
 ## Context Layer
 
-The context layer provides explicit state management with convenient defaults.
-
 ### ObservabilityContext
 
-The primary abstraction that encapsulates all mutable state:
+The primary abstraction encapsulating all observability state:
 
 ```python
 class ObservabilityContext:
-    """Explicit context for observability state."""
-    
-    def __init__(self, config: ObservabilityConfig):
-        self._handlers: List[Handler] = []
-        self._start_time = time.perf_counter_ns()
-        self._config = config
+    def __init__(self, config: Optional[ObservabilityConfig] = None):
+        self._handlers: List[EventHandler] = []
+        self._start_time_ns = time.perf_counter_ns()
+        self._lock = threading.Lock()
     
     def emit(self, event_type: str, value: Any, **metadata) -> None:
-        """Emit event with zero overhead when no handlers attached."""
-        if not self._handlers:  # Single check optimization
+        """Zero-overhead emission when no handlers attached."""
+        if not self._handlers:  # Single boolean check
             return
-        # Event processing...
+        # Event construction and dispatch
 ```
 
-### Configuration Management
+### SharedContext Pattern
 
-Configuration flows from application boundaries inward:
+A thread-safe singleton providing ambient observability access:
 
 ```python
-@dataclass
-class ObservabilityConfig:
-    """Immutable configuration loaded at boundaries."""
-    handlers: List[HandlerConfig]
-    sampling_rate: float = 1.0
-    enable_categories: Set[str] = field(default_factory=set)
+class SharedContext:
+    _ctx: Optional[ObservabilityContext] = None
+    _lock: threading.Lock = threading.Lock()
     
-# At application startup
-config = ObservabilityConfig(
-    handlers=[FileHandlerConfig('app.log')],
-    sampling_rate=0.01
-)
-obs_context = create_observability(config)
+    @classmethod
+    def setup(cls, config: Optional[ObservabilityConfig] = None):
+        """Initialize shared context once at application boundary."""
+        with cls._lock:
+            if cls._ctx is not None:
+                raise RuntimeError("Already initialized")
+            cls._ctx = ObservabilityContext(config)
+    
+    @classmethod
+    def get(cls) -> ObservabilityContext:
+        """Retrieve shared context for ambient access."""
+        if cls._ctx is None:
+            raise RuntimeError("Not initialized")
+        return cls._ctx
 ```
 
-### Default Context Pattern
+### Configuration
 
-For convenience, a default context provides ambient access:
+Immutable configuration loaded at application boundaries:
 
 ```python
-# Initialize once at application boundary
-observability.initialize_default(config)
+@dataclass(frozen=True)
+class ObservabilityConfig:
+    handlers: List[EventHandler] = field(default_factory=list)
+    sampling_rate: float = 1.0
+    enabled_categories: Set[str] = field(default_factory=set)
+```
 
-# Use anywhere via convenience functions
-from observability import emit
-emit('user.action', action='login')
+## Event System
 
-# Or explicitly override
-special_context = create_observability(special_config)
-process_sensitive_data(data, obs=special_context)
+### EventDict Structure
+
+Events flow as structured dictionaries with layered fields:
+
+```python
+EventDict = Dict[str, Any]
+# Core fields: type, value, timestamp_ns, context_name
+# Context fields: trace_id, request_id, operation_id
+# Domain fields: logger_name, span_id, metric_labels
+# User metadata: arbitrary kwargs
+```
+
+### Context Variables
+
+Ambient context enrichment via Python's contextvars:
+
+```python
+# Exported directly from observability package
+trace_id = contextvars.ContextVar("trace_id", default=None)
+request_id = contextvars.ContextVar("request_id", default=None)
+operation_id = contextvars.ContextVar("operation_id", default=None)
+```
+
+### Performance Characteristics
+
+| State | Overhead | Operation |
+|-------|----------|-----------|
+| No handlers | <1ns | Single boolean check |
+| With handlers | ~100ns | Event construction + dispatch |
+| Context lookup | ~20ns | Cached contextvar access |
+
+## Domain Layer
+
+Domains provide specialized APIs that emit structured events:
+
+### Direct Instantiation
+
+```python
+from observability.domains.logging import Logger
+from observability.domains.tracing import Span
+from observability.domains.metrics import Counter
+
+# Create domain objects directly
+logger = Logger('myapp.service', context)
+span = Span('operation', context)
+counter = Counter('requests', context)
+```
+
+### Event Type Constants
+
+Pre-computed constants eliminate runtime string construction:
+
+```python
+# logging.py
+LOG_40: Final[str] = "log.40"  # ERROR level
+LOG_20: Final[str] = "log.20"  # INFO level
+
+# tracing.py  
+SPAN_START: Final[str] = "span.start"
+SPAN_END: Final[str] = "span.end"
+```
+
+## Handler Layer
+
+### Handler Types
+
+**Sink Handlers** - Terminal I/O operations:
+- `PrintHandler`: Formatted console output
+- `JsonHandler`: JSON serialization
+- `ManagedFileHandler`: File writing with rotation
+
+**Control Handlers** - Flow modification:
+- `filtered()`: Predicate-based filtering
+- `sampled()`: Probabilistic sampling
+- `AsyncHandlerWorker`: Async queue processing
+
+**Composite Handlers** - Multi-handler coordination:
+- `FanoutHandler`: Broadcast to multiple handlers
+- `FallbackHandler`: Failover between handlers
+
+### Handler Composition
+
+Direct class instantiation for explicit configuration:
+
+```python
+# Development setup
+dev_handlers = [
+    PrintHandler(sys.stderr),
+    ManagedFileHandler('debug.log')
+]
+
+# Production setup  
+prod_handlers = [
+    filtered(
+        lambda e: e.get('level', 0) >= ERROR,
+        JsonHandler(sys.stderr)
+    ),
+    sampled(0.01, AsyncHandlerWorker(
+        BufferHandler(size=1000)
+    ))
+]
+
+config = ObservabilityConfig(handlers=prod_handlers)
 ```
 
 ## Usage Patterns
 
-### System Observability (Module-Level)
+### System Observability (Shared Context)
 
-Appropriate for infrastructure concerns, debugging, and operational metrics:
+For infrastructure concerns using ambient access:
 
 ```python
 # infrastructure/cache.py
-from observability import get_default
+from observability.shared import SharedContext
+from observability.domains.logging import Logger
 
-# Module-level logger for system observability
-logger = get_default().create_logger(__name__)
+# Module-level logger via shared context
+logger = Logger(__name__, SharedContext.get())
 
 def get_from_cache(key: str) -> Optional[Any]:
-    logger.debug(f"Cache lookup: {key}")
-    # Implementation...
+    logger.debug("Cache lookup", key=key)
+    # Implementation
 ```
 
-**When to use**:
-- Debug logging
-- Performance metrics
-- Error tracking
-- System health monitoring
+### Domain Observability (Explicit Context)
 
-### Domain Observability (Dependency Injection)
-
-Required for business logic, audit trails, and testable components:
+For business logic requiring isolation:
 
 ```python
 # domain/payment_processor.py
+from observability.domains.logging import Logger
+from observability.domains.metrics import Counter
+
 class PaymentProcessor:
     def __init__(self, gateway: Gateway, obs: ObservabilityContext):
         self.gateway = gateway
-        self.audit_log = obs.create_logger('audit.payments')
-        self.metrics = obs.create_metrics('payments')
+        self.logger = Logger('audit.payments', obs)
+        self.counter = Counter('payments.total', obs)
     
     def process_payment(self, payment: Payment) -> Result:
-        self.audit_log.info('payment.initiated', 
-                          amount=payment.amount,
-                          user_id=payment.user_id)
+        self.logger.info('Payment initiated', 
+                        amount=payment.amount,
+                        user_id=payment.user_id)
         
-        with self.metrics.timer('processing_time'):
-            result = self.gateway.charge(payment)
-            
-        self.metrics.counter('total').increment(
+        result = self.gateway.charge(payment)
+        self.counter.increment(
             status='success' if result.ok else 'failure'
         )
         return result
 ```
 
-**When to use**:
-- Business metrics
-- Audit logging
-- Compliance tracking
-- Component isolation for testing
-
 ### Testing Patterns
 
-Explicit contexts enable perfect test isolation:
+Explicit contexts enable perfect isolation:
 
 ```python
-def test_payment_processor_logs_amount():
-    # Create isolated test context
+def test_payment_logs_amount():
+    # Isolated test context
     buffer = BufferHandler()
-    test_config = ObservabilityConfig(handlers=[buffer])
-    test_context = create_observability(test_config)
+    config = ObservabilityConfig(handlers=[buffer])
+    test_context = ObservabilityContext(config)
+    test_context.start()
     
     # Inject test context
     processor = PaymentProcessor(MockGateway(), test_context)
@@ -184,222 +279,70 @@ def test_payment_processor_logs_amount():
     assert events[0]['amount'] == 100.0
 ```
 
-## Core Event System
-
-The event system is a lightweight publish-subscribe mechanism accessed through contexts.
-
-### Event Model
-
-Events are structured records containing:
-- **Type**: Hierarchical identifier (e.g., 'log.error', 'metric.counter')
-- **Value**: Primary payload
-- **Timestamp**: High-precision timing relative to context creation
-- **Context**: Automatic capture from contextvars
-- **Metadata**: Additional key-value pairs
-
-### Performance Characteristics
-
-Zero-overhead design through context-based optimization:
-
-| State | Overhead | Operation |
-|-------|----------|-----------|
-| No handlers | <1ns | Single boolean check |
-| With handlers | ~100ns | Event construction + dispatch |
-| Context lookup | ~20ns | Cached contextvar access |
-
-### Context Propagation
-
-Ambient context enriches events automatically:
-
-```python
-import contextvars
-
-trace_id = contextvars.ContextVar('trace_id')
-request_id = contextvars.ContextVar('request_id')
-
-# Set at request boundary
-request_id.set('req-123')
-
-# Automatically included in all events
-obs_context.emit('user.action', action='login')
-# Event includes: {'request_id': 'req-123', ...}
-```
-
-## Domain APIs
-
-Domain-specific APIs provide intuitive interfaces while emitting structured events.
-
-### Logging Domain
-```python
-logger = obs_context.create_logger('myapp')
-logger.info('User logged in', user_id=123)
-# Emits: {'type': 'log.info', 'message': 'User logged in', 'user_id': 123}
-```
-
-### Metrics Domain
-```python
-metrics = obs_context.create_metrics('api')
-metrics.counter('requests').increment(endpoint='/users')
-# Emits: {'type': 'metric.counter', 'name': 'api.requests', 'value': 1, 'endpoint': '/users'}
-```
-
-### Tracing Domain
-```python
-tracer = obs_context.create_tracer('service')
-with tracer.span('database.query') as span:
-    span.set_tag('query_type', 'SELECT')
-# Emits: {'type': 'span.start', ...} and {'type': 'span.end', ...}
-```
-
-## Handler Pipeline
-
-Handlers process events without blocking emission, maintaining isolation between different processing strategies.
-
-### Handler Composition
-
-```python
-# Development configuration
-dev_handler = fanout(
-    create_console_handler(color=True),
-    create_file_handler('debug.log', level=DEBUG)
-)
-
-# Production configuration
-prod_handler = fanout(
-    filtered(lambda e: e.get('level') >= ERROR, 
-             create_alert_handler()),
-    sampled(0.01, async_handler(
-        create_metrics_handler()
-    )),
-    async_handler(create_file_handler('app.log'))
-)
-```
-
 ## Initialization Patterns
 
-### Simple Application
+### Application Entry Point
 
 ```python
 # main.py
-from observability import initialize_default
+from observability import ObservabilityConfig, SharedContext
+from observability.handlers import JsonHandler
 
 def main():
-    # Initialize default context at entry point
-    initialize_default(ObservabilityConfig(
-        handlers=[create_console_handler()]
-    ))
+    # Initialize shared context once
+    config = ObservabilityConfig(
+        handlers=[JsonHandler(sys.stderr)],
+        sampling_rate=0.1
+    )
+    SharedContext.setup(config)
     
-    # Rest of application uses simple API
+    # Application runs with ambient access
     run_application()
-```
-
-### Complex Application
-
-```python
-# app.py
-def create_app(config: AppConfig) -> Application:
-    # Create explicit context
-    obs_config = ObservabilityConfig(
-        handlers=[
-            create_file_handler(config.log_file),
-            create_metrics_handler(config.metrics_endpoint)
-        ],
-        sampling_rate=config.sampling_rate
-    )
-    obs_context = create_observability(obs_config)
-    
-    # Wire through application
-    return Application(
-        database=Database(config.db_url, obs_context),
-        api=APIServer(obs_context),
-        obs_context=obs_context
-    )
 ```
 
 ### Library Pattern
 
 ```python
-# For libraries that need observability
+# Libraries accept optional contexts
 class DataProcessor:
     def __init__(self, obs: Optional[ObservabilityContext] = None):
-        self.obs = obs or null_context()  # Null object pattern
-        self.logger = self.obs.create_logger('processor')
-    
-    def process(self, data: Data) -> Result:
-        self.logger.debug('Processing started', size=len(data))
-        # ...
+        # Use provided context or shared
+        self.context = obs or SharedContext.get()
+        self.logger = Logger('processor', self.context)
 ```
 
 ## Implementation Strategy
 
-The architecture supports gradual adoption across large codebases:
-
-### Phase 1: Default Context
+### Phase 1: Shared Context
 ```python
-# Add default context initialization
-observability.initialize_default(config)
+# Initialize at entry point
+SharedContext.setup(config)
 
-# Simple emit() calls work via default
-emit('event', value=42)
+# Use throughout via SharedContext.get()
+logger = Logger('myapp', SharedContext.get())
 ```
 
 ### Phase 2: Explicit Contexts
 ```python
-# Code uses explicit contexts
-def new_service(obs: ObservabilityContext):
-    obs.emit('service.started')
+# Create isolated contexts where needed
+special_context = ObservabilityContext(special_config)
+special_context.start()
 
-# Support both patterns
-def flexible_function(data, obs=None):
-    obs = obs or get_default()
-    obs.emit('processing', size=len(data))
+# Pass explicitly for isolation
+service = Service(special_context)
 ```
 
 ### Phase 3: Full Adoption
 ```python
-# All code uses explicit contexts
-# Module-level for system observability
-logger = get_default().create_logger(__name__)
+# Shared for system concerns
+system_logger = Logger(__name__, SharedContext.get())
 
-# DI for domain observability
+# Explicit for domain logic
 class BusinessService:
     def __init__(self, obs: ObservabilityContext):
-        self.metrics = obs.create_metrics('business')
+        self.metrics = Counter('business', obs)
 ```
-
-## Benefits and Trade-offs
-
-### Benefits
-
-**Explicit Dependencies**:
-- Clear in function signatures
-- Perfect test isolation
-- Multiple configurations possible
-- No hidden global state
-
-**Flexible Patterns**:
-- Ambient access for convenience
-- Explicit injection for testing
-- Module-level for system concerns
-- DI for domain logic
-
-**Maintained Performance**:
-- Zero-overhead when disabled
-- Context enables optimization
-- Efficient handler dispatch
-
-### Trade-offs
-
-**Increased Verbosity**:
-- Additional parameters in signatures
-- Context threading through layers
-- More setup code in tests
-
-**Learning Curve**:
-- Two patterns to understand
-- When to use which approach
-- Implementation complexity
 
 ## Conclusion
 
-The Event-Driven Observability Architecture provides a sophisticated foundation that balances explicit dependency management with developer convenience. By supporting both ambient and injected patterns, it acknowledges that observability serves different purposes at different layers of the application. The context-based approach ensures testability and flexibility while maintaining the zero-overhead performance characteristics essential for production systems.
+The Event-Driven Observability Architecture provides a foundation balancing explicit dependency management with practical convenience. The SharedContext singleton acknowledges the reality of ambient logging needs while maintaining the option for explicit context injection where isolation matters. The direct instantiation approach keeps the API surface minimal while enabling sophisticated handler composition through simple class construction.

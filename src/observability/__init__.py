@@ -12,7 +12,7 @@ The observability system uses explicit contexts to manage state and configuratio
 ```
 Application Code
     ↓
-ObservabilityContext
+ObservabilityContext ←── SharedContext.get()
     ↓ emit()
 Handler Pipeline
     ├─→ Logging Handler → File/Console
@@ -27,19 +27,29 @@ All observability state lives within context objects, eliminating global state:
 ```python
 # Create configured context
 config = ObservabilityConfig(
-    handlers=[FileHandlerConfig('app.log')],
+    handlers=[ManagedFileHandler('app.log'), JsonHandler(sys.stderr)],
     sampling_rate=0.1
 )
-context = create_observability(config)
+context = ObservabilityContext(config)
+context.start()
 
-# Bind domains to context
-logging = LoggingDomain(context)
-tracing = TracingDomain(context)
-metrics = MetricsDomain(context)
+# Or use shared context for convenience
+SharedContext.setup(config)
+context = SharedContext.get()
 
-# Use domain APIs
-logger = logging.get_logger('myapp')
+# Instantiate domains directly
+from observability.domains.logging import Logger
+from observability.domains.tracing import Span
+from observability.domains.metrics import Counter
+
+logger = Logger('myapp', context)
 logger.info('Application started')
+
+with Span('operation', context) as span:
+    span.set_attribute('user_id', 123)
+
+counter = Counter('requests', context)
+counter.increment(endpoint='/api/users')
 ```
 
 ## Zero-Overhead Guarantee

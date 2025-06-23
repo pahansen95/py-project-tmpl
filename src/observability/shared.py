@@ -1,3 +1,38 @@
+"""
+# Shared Context Module
+
+Provides a thread-safe singleton pattern for ambient observability access. The SharedContext
+enables convenient access to observability features without explicit parameter passing,
+while maintaining the option for isolated contexts where needed.
+
+## Design Rationale
+
+Many applications need observability at module level for infrastructure concerns (caching,
+database connections, system health). The SharedContext provides this ambient access while
+preserving the ability to create isolated contexts for testing and domain logic.
+
+## Usage Pattern
+
+```python
+# Initialize once at application entry
+from observability import SharedContext, ObservabilityConfig
+from observability.handlers import JsonHandler
+
+config = ObservabilityConfig(handlers=[JsonHandler(sys.stderr)])
+SharedContext.setup(config)
+
+# Use throughout application
+from observability.domains.logging import Logger
+logger = Logger(__name__, SharedContext.get())
+```
+
+## Thread Safety
+
+The SharedContext uses thread-safe initialization with proper locking to ensure
+safe concurrent access. Automatic cleanup is registered via atexit for graceful
+shutdown.
+"""
+
 from typing import Optional, Any
 import threading
 import sys

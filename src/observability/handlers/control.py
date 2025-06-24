@@ -177,9 +177,11 @@ class TimeDeltaHandler:
 
     # Create enriched event
     enriched = event.copy()
-    enriched["timestamp_us"] = current_ns / 1_000
     enriched["delta_ns"] = delta_ns
     enriched["delta_us"] = delta_ns / 1_000
+    enriched["delta_ms"] = delta_ns / 1_000_000
+    enriched["timestamp_us"] = current_ns / 1_000
+    enriched["timestamp_ms"] = current_ns / 1_000_000
 
     # Forward to wrapped handler
     self.wrapped_handler(enriched)

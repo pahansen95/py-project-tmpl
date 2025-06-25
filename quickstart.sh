@@ -17,18 +17,19 @@ error() { printf "${RED}✗${RESET} %s\n" "$*" >&2; }
 
 usage() {
   cat >&2 <<EOF
-Usage: $(basename "$0") [-C DIR] [-u REMOTE] [-b BRANCH] [--ref REF] [--push]
-  -C DIR      Directory for new project (default: CWD)
-  -u URL      Configure git remote "origin"
-  -b BRANCH   Branch name for new project (default: main)
-  --ref REF   Git ref to checkout from template (branch/tag/commit, default: trunk)
-  --push      Push initial commit to remote
+Usage: $(basename "$0") [-C DIR] [-u REMOTE] [-b BRANCH] [--ref REF] [--push] [--no-cleanup]
+  -C DIR        Directory for new project (default: CWD)
+  -u URL        Configure git remote "origin"
+  -b BRANCH     Branch name for new project (default: main)
+  --ref REF     Git ref to checkout from template (branch/tag/commit, default: trunk)
+  --push        Push initial commit to remote
+  --no-cleanup  Keep project directory on failure
 EOF
 }
 
 # Defaults
 project_dir="."; remote_url=""; template_ref="trunk"
-local_branch="main"; push_remote=false
+local_branch="main"; push_remote=false; cleanup_on_fail=true
 
 # Parse arguments
 while [ $# -gt 0 ]; do
@@ -36,8 +37,9 @@ while [ $# -gt 0 ]; do
     -C) project_dir="$2"; shift 2 ;;
     -u) remote_url="$2"; shift 2 ;;
     -b) local_branch="$2"; shift 2 ;;
-    --ref|-r) template_ref="$2"; shift 2 ;;
+    --ref) template_ref="$2"; shift 2 ;;
     --push|-p) push_remote=true; shift ;;
+    --no-cleanup) cleanup_on_fail=false; shift ;;
     -h|--help) usage; exit 0 ;;
     --) shift; break ;;
     *) usage; exit 1 ;;
@@ -46,13 +48,79 @@ done
 
 template_repo="${QUICKSTART_TEMPLATE_REPO:-https://github.com/pahansen95/py-project-tmpl.git}"
 
+# Cleanup handler
+project_created=false
+cleanup() {
+  if [ "$cleanup_on_fail" = true ] && [ "$project_created" = true ] && [ $? -ne 0 ]; then
+    warning "Cleaning up failed initialization..."
+    rm -rf "$project_dir"
+  fi
+}
+trap cleanup EXIT
+
 # Clone template
 info "Cloning template from ${BOLD}$template_repo${RESET} (ref: ${BOLD}$template_ref${RESET})..."
-if ! git clone --depth 1 --branch "$template_ref" "$template_repo" "$project_dir" 2>/dev/null; then
-  cat >&2 <<EOF
-${RED}✗${RESET} Failed to clone template repository
-${RED}✗${RESET} Please check the repository URL and ref name
+
+# Detect if ref looks like a commit SHA
+if [[ "$template_ref" =~ ^[0-9a-f]{7,40}$ ]]; then
+  # Full clone needed for commit SHAs
+  { clone_output=$(git clone "$template_repo" "$project_dir" 2>&1); clone_status=$?; } || true
+  if [ $clone_status -eq 0 ]; then
+    project_created=true
+    cd "$project_dir"
+    if ! git checkout "$template_ref" 2>/dev/null; then
+      cd - >/dev/null
+      cat >&2 <<EOF
+${RED}✗${RESET} Failed to checkout commit ${BOLD}$template_ref${RESET}
+${RED}✗${RESET} The commit may not exist or may not be reachable from any branch
+${RED}✗${RESET} Verify the commit SHA is correct and exists in the repository
 EOF
+      exit 1
+    fi
+    cd - >/dev/null
+  fi
+else
+  # Shallow clone for branches/tags
+  { clone_output=$(git clone --depth 1 --branch "$template_ref" "$template_repo" "$project_dir" 2>&1); clone_status=$?; } || true
+  [ $clone_status -eq 0 ] && project_created=true
+fi
+
+if [ $clone_status -ne 0 ]; then
+  # Analyze error for specific guidance
+  if echo "$clone_output" | grep -q "Repository not found\|repository does not exist"; then
+    cat >&2 <<EOF
+${RED}✗${RESET} Repository not found: ${BOLD}$template_repo${RESET}
+${RED}✗${RESET} Check that the repository URL is correct and accessible
+${RED}✗${RESET} If using SSH, ensure you have access permissions
+EOF
+  elif echo "$clone_output" | grep -q "Remote branch .* not found\|couldn't find remote ref"; then
+    cat >&2 <<EOF
+${RED}✗${RESET} Reference not found: ${BOLD}$template_ref${RESET}
+${RED}✗${RESET} The branch, tag, or commit does not exist in the repository
+${RED}✗${RESET} Available branches can be listed with:
+${RED}✗${RESET}   git ls-remote --heads $template_repo
+EOF
+  elif echo "$clone_output" | grep -q "Permission denied\|Authentication failed"; then
+    cat >&2 <<EOF
+${RED}✗${RESET} Authentication failed for ${BOLD}$template_repo${RESET}
+${RED}✗${RESET} Check your SSH keys or credentials
+${RED}✗${RESET} For SSH URLs, verify your key is added: ssh-add -l
+${RED}✗${RESET} For HTTPS URLs, check your access token
+EOF
+  elif echo "$clone_output" | grep -q "Could not resolve host\|Name or service not known"; then
+    cat >&2 <<EOF
+${RED}✗${RESET} Network error: cannot reach ${BOLD}$template_repo${RESET}
+${RED}✗${RESET} Check your internet connection
+${RED}✗${RESET} Verify the repository hostname is correct
+EOF
+  else
+    cat >&2 <<EOF
+${RED}✗${RESET} Failed to clone template repository
+${RED}✗${RESET} Error: $(echo "$clone_output" | grep -i "fatal:" | head -1 | sed 's/fatal: //')
+${RED}✗${RESET} Repository: $template_repo
+${RED}✗${RESET} Reference: $template_ref
+EOF
+  fi
   exit 1
 fi
 success "Template cloned successfully"
@@ -107,3 +175,7 @@ Next steps:
 
 EOF
 success "Happy coding! 🚀"
+
+# Mark successful completion to prevent cleanup
+trap - EXIT
+exit 0

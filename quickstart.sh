@@ -142,7 +142,7 @@ EOF
   fi
   exit 1
 fi
-success "Template cloned successfully"
+[ "$dry_run" = false ] && success "Template cloned successfully"
 
 # Cleanup
 info "Cleaning up template files..."
@@ -157,14 +157,13 @@ execute git init -b "$local_branch"
 execute git add .
 execute git commit -m "Initial commit from template"
 execute git clean -fd
-[ "$dry_run" = false ] && cd - >/dev/null
-success "Repository initialized"
+[ "$dry_run" = false ] && success "Repository initialized"
 
 # Configure remote
 if [ -n "$remote_url" ]; then
   info "Configuring remote ${BOLD}origin${RESET} -> ${BOLD}$remote_url${RESET}"
   execute git remote add origin "$remote_url"
-  success "Remote configured"
+  [ "$dry_run" = false ] && success "Remote configured"
   
   if [ "$push_remote" = true ]; then
     info "Pushing to remote..."
@@ -184,6 +183,9 @@ EOF
     fi
   fi
 fi
+
+# Return to original directory
+[ "$dry_run" = false ] && cd - >/dev/null
 
 # Summary
 if [ "$dry_run" = true ]; then

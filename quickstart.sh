@@ -15,21 +15,33 @@ success() { printf "${GREEN}✓${RESET} %s\n" "$*"; }
 warning() { printf "${YELLOW}⚠${RESET} %s\n" "$*" >&2; }
 error() { printf "${RED}✗${RESET} %s\n" "$*" >&2; }
 
+# Dry run handler
+dryrun() { [ "$dry_run" = true ] && printf "${YELLOW}[DRY RUN]${RESET} %s\n" "$*"; }
+execute() {
+  if [ "$dry_run" = true ]; then
+    dryrun "$*"
+    return 0
+  else
+    "$@"
+  fi
+}
+
 usage() {
   cat >&2 <<EOF
-Usage: $(basename "$0") [-C DIR] [-u REMOTE] [-b BRANCH] [--ref REF] [--push] [--no-cleanup]
+Usage: $(basename "$0") [-C DIR] [-u REMOTE] [-b BRANCH] [--ref REF] [--push] [--dry-run] [--no-cleanup]
   -C DIR        Directory for new project (default: CWD)
   -u URL        Configure git remote "origin"
   -b BRANCH     Branch name for new project (default: main)
   --ref REF     Git ref to checkout from template (branch/tag/commit, default: trunk)
   --push        Push initial commit to remote
+  --dry-run     Show what would be done without executing
   --no-cleanup  Keep project directory on failure
 EOF
 }
 
 # Defaults
 project_dir="."; remote_url=""; template_ref="trunk"
-local_branch="main"; push_remote=false; cleanup_on_fail=true
+local_branch="main"; push_remote=false; cleanup_on_fail=true; dry_run=false
 
 # Parse arguments
 while [ $# -gt 0 ]; do
@@ -39,6 +51,7 @@ while [ $# -gt 0 ]; do
     -b) local_branch="$2"; shift 2 ;;
     --ref) template_ref="$2"; shift 2 ;;
     --push|-p) push_remote=true; shift ;;
+    --dry-run) dry_run=true; shift ;;
     --no-cleanup) cleanup_on_fail=false; shift ;;
     -h|--help) usage; exit 0 ;;
     --) shift; break ;;
@@ -51,7 +64,7 @@ template_repo="${QUICKSTART_TEMPLATE_REPO:-https://github.com/pahansen95/py-proj
 # Cleanup handler
 project_created=false
 cleanup() {
-  if [ "$cleanup_on_fail" = true ] && [ "$project_created" = true ] && [ $? -ne 0 ]; then
+  if [ "$cleanup_on_fail" = true ] && [ "$project_created" = true ] && [ $? -ne 0 ] && [ "$dry_run" = false ]; then
     warning "Cleaning up failed initialization..."
     rm -rf "$project_dir"
   fi
@@ -61,28 +74,34 @@ trap cleanup EXIT
 # Clone template
 info "Cloning template from ${BOLD}$template_repo${RESET} (ref: ${BOLD}$template_ref${RESET})..."
 
-# Detect if ref looks like a commit SHA
-if [[ "$template_ref" =~ ^[0-9a-f]{7,40}$ ]]; then
-  # Full clone needed for commit SHAs
-  { clone_output=$(git clone "$template_repo" "$project_dir" 2>&1); clone_status=$?; } || true
-  if [ $clone_status -eq 0 ]; then
-    project_created=true
-    cd "$project_dir"
-    if ! git checkout "$template_ref" 2>/dev/null; then
-      cd - >/dev/null
-      cat >&2 <<EOF
+if [ "$dry_run" = true ]; then
+  dryrun "git clone --branch $template_ref $template_repo $project_dir"
+  project_created=true
+  clone_status=0
+else
+  # Detect if ref looks like a commit SHA
+  if [[ "$template_ref" =~ ^[0-9a-f]{7,40}$ ]]; then
+    # Full clone needed for commit SHAs
+    { clone_output=$(git clone "$template_repo" "$project_dir" 2>&1); clone_status=$?; } || true
+    if [ $clone_status -eq 0 ]; then
+      project_created=true
+      cd "$project_dir"
+      if ! git checkout "$template_ref" 2>/dev/null; then
+        cd - >/dev/null
+        cat >&2 <<EOF
 ${RED}✗${RESET} Failed to checkout commit ${BOLD}$template_ref${RESET}
 ${RED}✗${RESET} The commit may not exist or may not be reachable from any branch
 ${RED}✗${RESET} Verify the commit SHA is correct and exists in the repository
 EOF
-      exit 1
+        exit 1
+      fi
+      cd - >/dev/null
     fi
-    cd - >/dev/null
+  else
+    # Shallow clone for branches/tags
+    { clone_output=$(git clone --depth 1 --branch "$template_ref" "$template_repo" "$project_dir" 2>&1); clone_status=$?; } || true
+    [ $clone_status -eq 0 ] && project_created=true
   fi
-else
-  # Shallow clone for branches/tags
-  { clone_output=$(git clone --depth 1 --branch "$template_ref" "$template_repo" "$project_dir" 2>&1); clone_status=$?; } || true
-  [ $clone_status -eq 0 ] && project_created=true
 fi
 
 if [ $clone_status -ne 0 ]; then
@@ -127,41 +146,62 @@ success "Template cloned successfully"
 
 # Cleanup
 info "Cleaning up template files..."
-rm -rf "$project_dir/.git" "$project_dir/quickstart.sh"
-rm -f "$project_dir/tests/test_quickstart.py"
-rm -rf "$project_dir/tests/helpers" "$project_dir/meta/kb/contributor-guide"
+execute rm -rf "$project_dir/.git" "$project_dir/quickstart.sh"
+execute rm -f "$project_dir/tests/test_quickstart.py"
+execute rm -rf "$project_dir/tests/helpers" "$project_dir/meta/kb/contributor-guide"
 
 # Initialize repository
-cd "$project_dir"
+[ "$dry_run" = false ] && cd "$project_dir"
 info "Initializing new git repository with branch ${BOLD}$local_branch${RESET}..."
-git init -b "$local_branch"
-git add . && git commit -m "Initial commit from template"
-git clean -fd > /dev/null
+execute git init -b "$local_branch"
+execute git add .
+execute git commit -m "Initial commit from template"
+execute git clean -fd
+[ "$dry_run" = false ] && cd - >/dev/null
 success "Repository initialized"
 
 # Configure remote
 if [ -n "$remote_url" ]; then
   info "Configuring remote ${BOLD}origin${RESET} -> ${BOLD}$remote_url${RESET}"
-  git remote add origin "$remote_url"
+  execute git remote add origin "$remote_url"
   success "Remote configured"
   
   if [ "$push_remote" = true ]; then
     info "Pushing to remote..."
-    if ! git push -u origin HEAD 2>/dev/null; then
-      cat >&2 <<EOF
+    if [ "$dry_run" = true ]; then
+      dryrun "git push -u origin HEAD"
+    else
+      if ! git push -u origin HEAD 2>/dev/null; then
+        cat >&2 <<EOF
 ${YELLOW}⚠${RESET} Failed to push to remote. You may need to:
 ${YELLOW}⚠${RESET}   - Check your authentication credentials
 ${YELLOW}⚠${RESET}   - Ensure the remote repository exists
 ${YELLOW}⚠${RESET}   - Run: git push -u origin HEAD
 EOF
-    else
-      success "Successfully pushed to remote"
+      else
+        success "Successfully pushed to remote"
+      fi
     fi
   fi
 fi
 
 # Summary
-cat <<EOF
+if [ "$dry_run" = true ]; then
+  cat <<EOF
+
+${YELLOW}${BOLD}🔍 Dry run complete!${RESET}
+
+This would have:
+  📁 Created project in: ${BOLD}$project_dir${RESET}
+  🌿 Initialized branch: ${BOLD}$local_branch${RESET}
+  📦 Cloned from: ${BOLD}$template_repo${RESET} (ref: ${BOLD}$template_ref${RESET})
+$([ -n "$remote_url" ] && printf "  🔗 Configured remote: ${BOLD}%s${RESET}\n" "$remote_url")
+$([ "$push_remote" = true ] && printf "  📤 Pushed to remote\n")
+
+No changes were made. Remove --dry-run to execute.
+EOF
+else
+  cat <<EOF
 
 ${GREEN}${BOLD}✨ Project initialized successfully!${RESET}
 
@@ -174,7 +214,8 @@ Next steps:
   ${BOLD}helpers/bootstrap.sh${RESET}  # Set up development environment
 
 EOF
-success "Happy coding! 🚀"
+  success "Happy coding! 🚀"
+fi
 
 # Mark successful completion to prevent cleanup
 trap - EXIT

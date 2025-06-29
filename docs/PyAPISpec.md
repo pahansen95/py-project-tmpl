@@ -1,536 +1,286 @@
-# Python API Specification
+# Python API Specification Standard
 
-## About This Document
+## Executive Summary
 
-This reference establishes standards for Python API Specifications - the contractual interface definitions between library maintainers and users.
+### The Prescription Principle
 
-### Mental Model
+API Specifications prescribe how users SHOULD interact with libraries, not describe what they CAN access. This fundamental principle drives all design decisions in this standard.
 
-API Specifications serve three interconnected purposes:
+### Three-Tier Stability Model
 
-1. **Contractual Boundary**: Defines the stable interface with versioning guarantees
-2. **Prescriptive Guide**: Directs users toward successful integration patterns  
-3. **Self-Contained Reference**: Provides complete understanding without external documentation
+```
+├── Tier 1: EXPORTED (in .pyi)  → Major version stability
+├── Tier 2: PUBLIC (no _)       → Minor version stability  
+└── Tier 3: PRIVATE (_name)     → No stability guarantees
+```
 
-The specification is not merely documentation of what exists, but a deliberate design of what users should interact with. In Python's open ecosystem where all code is technically accessible, the API Specification carves out the supported interaction surface.
+### Stability Commitment Ladder
 
-### Design Philosophy
+| Access Level | Stability Guarantee | User Impact |
+|-------------|-------------------|-------------|
+| Exported | Major version | Safe for production |
+| Public | Minor version | Use with caution |
+| Private | None | Use at own risk |
 
-- **Explicit over Discovered**: Exported names are explicitly chosen, not automatically derived
-- **Prescriptive over Descriptive**: Guides correct usage rather than documenting all possibilities
-- **Hierarchical Disclosure**: Progressive layers from highly prescribed to loosely guided
-- **Examples as Contract**: Usage examples demonstrate both how and what is guaranteed
-
-### Relationship to Implementation
-
-API Specifications document the designed interface, not the implementation structure. Public modules may exist without specifications if users should not import from them directly. The presence of a specification file is itself a design decision endorsing that import path.
-
-## 1. Introduction
+## 1. Concepts and Mental Model
 
 ### 1.1 Purpose
 
-This document defines normative requirements for Python API Specifications - the authoritative contract between library maintainers and users. An API Specification establishes the supported interface boundary, prescribes correct usage patterns, and provides self-contained reference documentation that supersedes external documentation for contractual purposes.
+This standard defines requirements for Python API Specifications - prescriptive contracts between library maintainers and users. API Specifications establish supported interfaces, guide correct usage, and provide stability guarantees.
 
-### 1.2 Scope
+### 1.2 The Prescription Principle
 
-This specification applies to Python libraries intended for public distribution. It covers:
-- Stub file placement based on import patterns
-- Documentation requirements for exported names
-- Type annotation standards
-- Export policies and versioning guarantees
+API Specifications serve three interconnected purposes:
 
-Key principle: API specifications are prescriptive design documents that define how users should interact with a library, not comprehensive catalogs of available functionality.
+1. **Contractual Boundary**: Defines stable interfaces with explicit versioning guarantees
+2. **Prescriptive Guide**: Directs users toward successful integration patterns  
+3. **Self-Contained Reference**: Provides complete understanding without external resources
 
-### 1.3 Conventions
+The specification prescribes intended usage patterns rather than documenting all technical possibilities.
 
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in RFC 2119.
+### 1.3 Three-Tier Access Model
 
-### 1.4 Terminology
+Python's open nature means all code is technically accessible. API Specifications establish three access tiers:
 
-- **API Specification**: A Python stub file (`.pyi`) documenting exported names
-- **Export**: To include a name in a formal API specification, granting major version stability
-- **Private Name**: An identifier prefixed with underscore, no stability guarantees
-- **Public Name**: An identifier not prefixed with underscore, stable within minor versions
-- **Exported Name**: A public name included in an API specification, stable within major versions
-- **Import Point**: A module or package from which users are intended to import
-- **Internal Module**: Implementation module not intended for direct import (may be private or public)
+**Tier 1: Exported API** (Documented in `.pyi` files)
+- Explicit design decision to support
+- Major version stability guarantee
+- Full documentation and examples
+- Primary user interface
 
-## 2. File Organization
+**Tier 2: Public Implementation** (No underscore prefix)
+- Available but not guaranteed
+- May change in minor versions
+- Limited or no documentation
+- Power user territory
 
-### 2.1 Stub File Placement
+**Tier 3: Private Implementation** (Underscore prefix)
+- Internal use only
+- Changes without notice
+- No documentation
+- Use violates design intent
 
-API specifications document EXPORTED names at their intended import locations. The presence of a stub file is an explicit endorsement of that import path. Absence of a stub, even for public modules, signals "not part of the designed interface."
+### 1.4 Design Philosophy
 
-```
-# Package with unified API (single import point)
-src/
-└── library/
-    ├── __init__.py       # Exports: Process, Config, run()
-    ├── __init__.pyi      # Single API spec for all exports
-    ├── process.py        # Public module - but no stub needed
-    ├── config.py         # Public module - but no stub needed
-    ├── utils.py          # Public module - but no stub needed
-    └── _internal.py      # Private module
+**Explicit over Discovered**: Exported names are deliberately chosen, not automatically derived from implementation availability.
 
-# In this case:
-# - process.py, config.py, utils.py are PUBLIC (no underscore)
-# - But they don't get stubs because users should import from library
-# - Only library/__init__.pyi documents the EXPORTED API
+**Prescriptive over Descriptive**: Specifications guide users toward correct patterns rather than cataloging all possibilities.
 
-# Namespace package (no __init__.py) - independent modules
-src/
-└── converters/           # Namespace package - no __init__.py
-    ├── json2xml.py       # Users import: from converters.json2xml import convert
-    ├── json2xml.pyi      # API spec for json2xml module
-    ├── xml2csv.py        # Users import: from converters.xml2csv import convert  
-    ├── xml2csv.pyi       # API spec for xml2csv module
-    ├── yaml2json.py      # Users import: from converters.yaml2json import convert
-    └── yaml2json.pyi     # API spec for yaml2json module
+**Progressive Disclosure**: APIs reveal complexity in layers, guiding users from simple to advanced usage.
 
-# In namespace packages:
-# - Each module is completely independent
-# - Each module is its own import point
-# - Each module gets its own stub
-# - No __init__.pyi because there's no __init__.py
-```
+**Examples as Contract**: Usage examples demonstrate guaranteed behaviors, not just suggestions.
 
-### 2.2 File Naming Requirements
+### 1.5 Key Terminology
 
-- Package specifications MUST use `__init__.pyi` when the package exports names
-- Module specifications MUST match the module name: `module.pyi` 
-- Only modules at intended import points SHOULD have specifications
-- Public modules re-exported by packages MUST NOT have separate specifications
+- **API Specification**: A `.pyi` stub file documenting exported names
+- **Export**: To include in a specification, granting major version stability
+- **Exported Name**: A public name included in an API specification
+- **Public Name**: An identifier without underscore prefix
+- **Private Name**: An identifier with underscore prefix
+- **Import Point**: A module path users should import from
+- **Internal Module**: Implementation module not intended for direct import
 
-Example:
+### 1.6 Conventions
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" are interpreted as described in RFC 2119.
+
+## 2. Quick Start Guide
+
+### 2.1 Minimal Example
+
 ```python
-# library/__init__.py re-exports from public modules
-from .connection import Connection
-from .client import Client
-from .errors import NetworkError
+# library/__init__.py - Implementation
+from .engine import Engine
+from .utils import helper  # Available but not exported
 
-# Only library/__init__.pyi needed:
-class Connection: ...
-class Client: ...  
-class NetworkError(Exception): ...
+# library/__init__.pyi - API Specification
+"""Data processing library."""
 
-# No stubs for connection.py, client.py, errors.py even though they're public
-# Users should import: from library import Connection
-# Not: from library.connection import Connection
+class Engine:
+    """Primary processing engine."""
+    def __init__(self, config: dict[str, Any]) -> None: ...
+    def process(self, data: bytes) -> str: ...
+
+# Note: helper deliberately not exported - design decision
 ```
 
-### 2.3 Import-Based Structure
+### 2.2 Export Decision Flowchart
 
-API specifications MUST reflect the intended import patterns, not implementation structure:
-
-- If users import from a package (`from pkg import Class`), only `pkg/__init__.pyi` is needed
-- If users import from a module (`from pkg.module import func`), then `pkg/module.pyi` is needed
-- Internal modules that are re-exported through `__init__.py` do NOT need separate stubs
-
-### 2.4 Export Principles
-
-API specifications document the EXPORTED public names at their intended import points. Stub files establish the boundary between supported API (exported) and available implementation (public). This boundary is a design decision, not a mechanical derivation.
-
-Example - Three-Tier Distinction:
 ```
-# Library structure
+Should this name be exported?
+├─ Does it require implementation knowledge? → NO EXPORT
+├─ Will it remain stable across major versions? → CONSIDER
+├─ Does it provide clear user value? → CONSIDER
+└─ All conditions met? → EXPORT
+```
+
+### 2.3 Documentation Depth Matrix
+
+| Component Type | Documentation Required | Typical Length |
+|---------------|----------------------|----------------|
+| Type Alias | Purpose statement | 1 line |
+| Simple Method | Purpose + parameters | 3-5 lines |
+| Core Class | Full behavioral spec | 15-30 lines |
+| Protocol | Contract definition | 10-20 lines |
+| Complex Function | Complete guide | 20-40 lines |
+
+## 3. Specification Engineering
+
+### 3.1 File Organization
+
+#### 3.1.1 Stub File Placement
+
+API specifications use `.pyi` stub files placed according to import patterns:
+
+```python
+# If users import: from library import Thing
+# Then create: library/__init__.pyi defining Thing
+
+# If users import: from library.module import Other
+# Then create: library/module.pyi defining Other
+```
+
+**Key Principle**: The presence of a stub file endorses that import path. Absence signals "not part of designed interface."
+
+#### 3.1.2 Three-Tier Model in Practice
+
+```python
 library/
 ├── __init__.py       # from .engine import Engine
-├── __init__.pyi      # class Engine: ...  (EXPORTED)
-├── engine.py         # PUBLIC module with Engine class
-├── utils.py          # PUBLIC module with helper functions
-└── _internal.py      # PRIVATE module
-
-# Tier 1: Exported API (documented in stubs)
-from library import Engine  # ✓ Stable, recommended
-
-# Tier 2: Public but not exported (no stubs)
-from library.engine import Engine  # Works but not guaranteed
-from library.utils import helper   # Public but no major version guarantee
-
-# Tier 3: Private usage
-from library._internal import State  # No guarantees at all
+├── __init__.pyi      # class Engine: ... (EXPORTED - Tier 1)
+├── engine.py         # PUBLIC module (Tier 2)
+├── utils.py          # PUBLIC but no stub (Tier 2)
+└── _internal.py      # PRIVATE module (Tier 3)
 ```
 
-## 3. Specification Structure
+This structure communicates:
+- `Engine` via `library` import: Stable, supported
+- `engine.py` module: Available but less stable
+- `utils.py` functions: Use with caution
+- `_internal.py`: Hands off
 
-### 3.1 Recommended API Specification Structure
+### 3.2 Specification Structure Template
 
-For consistency across projects, API specifications SHOULD follow this five-section template. While simpler APIs may use abbreviated structures, this template provides a comprehensive framework suitable for most libraries:
-
-#### Template Structure
-
-1. **API Spec Overview** - Module docstring with purpose, examples, and mental model
-2. **Python & External Imports** - All necessary imports
-3. **API Type Aliases, Protocols, Enums** - Type definitions
-4. **API Core Types & Functionality** - Primary exported interface
-5. **API Supporting Types & Functionality** - Secondary utilities
-
-This structure may be adapted based on API complexity:
-- **Minimal APIs**: May combine or omit sections
-- **Complex APIs**: Should use the full structure with detailed subsections
-
-#### 3.1.1 API Spec Overview
-The module docstring providing comprehensive API documentation:
-
-```python
-"""Single-line summary of the API purpose.
-
-Extended description containing:
-- What functionality the API provides
-- Expected behaviors and guarantees
-- When and why to use this API
-- Key architectural decisions
-
-## Quick Start
-
-Minimal working example:
-
-    from library import MainClass
-    instance = MainClass()
-    result = instance.process(data)
-
-## Mental Model
-
-Conceptual framework explaining how the API works internally,
-why it's structured this way, and how components interact.
-
-## Usage Guidelines
-
-Detailed patterns for common use cases, edge cases, and 
-best practices for integrating the API.
-"""
-```
-
-#### 3.1.2 Python & External Imports
-All import statements, starting with future imports:
-
-```python
-from __future__ import annotations  # REQUIRED first line
-from typing import Protocol, TypeAlias, Any, Optional
-import external_dependency
-from external_package import ExternalType
-```
-
-#### 3.1.3 API Type Aliases, Protocols, Enums
-Type definitions ordered by complexity:
-
-```python
-# Type aliases with brief docstrings
-ConfigDict: TypeAlias = dict[str, Any]
-"""Configuration mapping for initialization."""
-
-# Enums with purpose documentation
-class Status(Enum):
-    """Processing status states."""
-    PENDING = "pending"
-    ACTIVE = "active"
-    COMPLETE = "complete"
-
-# Protocols with comprehensive contracts
-class ProcessorProtocol(Protocol):
-    """
-    Contract for data processors.
-    
-    Defines the interface that all processors must implement,
-    including both synchronous and asynchronous variants.
-    """
-    def process(self, data: bytes) -> Result: ...
-```
-
-#### 3.1.4 API Core Types & Functionality
-Primary exported functionality that users directly interact with. Comprehensive documentation required.
-
-#### 3.1.5 API Supporting Types & Functionality
-Secondary functionality that supports the core API. Documentation explains relationship to core functionality.
-
-### 3.2 Section Formatting Requirements
-
-#### 3.2.1 Section Separators
-Each major section MUST be visually separated with comment blocks:
+API specifications SHOULD follow this five-section template:
 
 ```python
 # ruff: noqa: F811
-"""API Spec Overview..."""
+"""
+1. API SPECIFICATION OVERVIEW
+Single-line summary.
 
-from __future__ import annotations
-# ... other imports ...
+Extended description of functionality, guarantees, and use cases.
+
+## Quick Start
+    from library import MainClass
+    result = MainClass().process(data)
+
+## Mental Model
+Conceptual framework for understanding the API.
+"""
+
+# 2. IMPORTS
+from __future__ import annotations  # ALWAYS first
+from typing import Protocol, TypeAlias
+import external_dependency
 
 # =============================================================================
 # API Type Aliases, Protocols, Enums
 # =============================================================================
 
-# ... type definitions ...
+# 3. TYPE DEFINITIONS
+ConfigDict: TypeAlias = dict[str, Any]
+"""Configuration parameters."""
+
+class ProcessMode(Enum):
+    """Processing strategies."""
+    FAST = "fast"
+    ACCURATE = "accurate"
 
 # =============================================================================
 # API Core Types & Functionality
 # =============================================================================
 
-# ... core API ...
+# 4. CORE API
+class MainClass:
+    """Primary user interface."""
+    def __init__(self, config: ConfigDict) -> None: ...
+    def process(self, data: bytes) -> Result: ...
 
 # =============================================================================
 # API Supporting Types & Functionality
 # =============================================================================
 
-# ... supporting API ...
+# 5. SUPPORTING API
+def create_default_config() -> ConfigDict:
+    """Generate standard configuration."""
+    ...
 ```
 
-#### 3.2.2 Ordering Within Sections
+### 3.3 Documentation Standards
 
-**Type Definitions Section** - Order by dependency and complexity:
-1. Simple type aliases
-2. Enums
-3. Complex type aliases (using other types)
-4. Protocols (simplest to most complex)
+#### 3.3.1 Depth by Component Type
 
-**Core API Section** - Order by importance and usage frequency:
-1. Primary classes/functions users interact with most
-2. Essential data structures
-3. Main processing functions
-4. Configuration classes
+Documentation depth matches component complexity and user needs:
 
-**Supporting API Section** - Order by relationship to core:
-1. Factory functions for core types
-2. Utility functions
-3. Helper classes
-4. Advanced/specialized functionality
-
-### 3.3 Documentation Standards Per Section
-
-#### 3.3.1 Documentation Depth Guidelines
-
-Documentation depth should match complexity and user needs:
-
-**Minimal Documentation**
-- Properties, simple methods, obvious operations
-- Single-line purpose statement
-- Constraints noted inline (read-only, ranges)
-
+**Minimal Documentation** (Properties, simple methods):
 ```python
 @property
 def name(self) -> str:
     """Entity name (read-only)."""
-    ...
 ```
 
-**Standard Documentation**  
-- Core classes, primary functions
-- Purpose, parameters, return values
-- Single clarifying example
-- Key behavioral notes
-
+**Standard Documentation** (Core functions):
 ```python
-def process(data: bytes) -> str:
+def process(data: bytes, *, validate: bool = True) -> str:
     """
     Convert raw bytes to normalized string.
     
     Args:
         data: UTF-8 encoded bytes
+        validate: Whether to check encoding
         
     Returns:
-        Normalized string with whitespace trimmed
+        Normalized string, whitespace trimmed
         
     Example:
-        result = process(b'  hello  ')
-        assert result == 'hello'
+        >>> process(b'  hello  ')
+        'hello'
     """
-    ...
 ```
 
-**Comprehensive Documentation**
-- Complex patterns, framework entry points
-- Full behavioral specification
-- Multiple usage examples  
-- Integration patterns
-- Performance characteristics
-
-#### 3.3.2 Import Section Requirements
-
+**Comprehensive Documentation** (Complex patterns):
 ```python
-# ALWAYS first (required for all stubs)
-from __future__ import annotations
-
-# Standard library types needed for annotations
-from typing import Protocol, TypeAlias, Optional, Union, Any
-from collections.abc import Sequence, Mapping
-
-# External dependencies (if any)
-import numpy as np
-from external_lib import RequiredType
-
-# No relative imports in stubs - use full package paths
-from mypackage.types import SharedType  # Not: from .types import
-```
-
-#### 3.3.3 Type Definition Documentation
-
-**Type Aliases** - Brief single-line docstrings:
-```python
-ConfigDict: TypeAlias = dict[str, Any]
-"""Runtime configuration parameters."""
-
-FilterFunc: TypeAlias = Callable[[Event], bool]
-"""Predicate for event filtering."""
-```
-
-**Enums** - Purpose and value meanings:
-```python
-class ProcessingMode(Enum):
+class DataProcessor:
     """
-    Processing strategy selection.
+    High-performance data transformation engine.
     
-    Determines the execution model and resource allocation.
-    """
-    SERIAL = "serial"      # Single-threaded execution
-    PARALLEL = "parallel"  # Multi-threaded with thread pool
-    ASYNC = "async"        # Asynchronous with event loop
-```
-
-**Protocols** - Comprehensive contract documentation:
-```python
-class DataSource(Protocol):
-    """
-    Contract for data acquisition implementations.
+    Processes data through configurable pipeline stages with
+    automatic parallelization and error recovery. Thread-safe
+    after initialization.
     
-    Defines the interface for retrieving data from various sources
-    with consistent error handling and retry semantics.
-    
-    Implementations must:
-    - Handle connection failures gracefully
-    - Respect timeout constraints
-    - Provide meaningful error messages
-    - Support cancellation via context
-    """
-    
-    def fetch(self, query: Query) -> Result:
-        """Retrieve data matching query parameters."""
-        ...
-```
-
-#### 3.3.4 Core API Documentation Standards
-
-Every exported name in the Core API section MUST have comprehensive documentation:
-
-**Classes** - Complete behavioral documentation:
-```python
-class CoreProcessor:
-    """
-    Single-line purpose statement.
-    
-    Extended description covering:
-    - Primary responsibility and role in the system
-    - Behavioral guarantees and constraints  
-    - Thread safety and performance characteristics
-    - Relationship to other core components
+    The processor maintains internal state for optimization
+    but presents a stateless interface to users.
     
     Args:
-        config: Configuration dictionary with keys:
-            - 'timeout': Maximum seconds per operation (default: 30)
-            - 'retry': Number of retry attempts (default: 3)
-            - 'mode': Processing mode from ProcessingMode enum
-        logger: Optional logger instance for operation tracking
-        
-    Raises:
-        ConfigError: Missing required config keys or invalid values
-        RuntimeError: Processor already initialized
+        config: Configuration with keys:
+            - 'mode': ProcessMode selection
+            - 'threads': Worker count (1-32)
+            - 'timeout': Max seconds per operation
         
     Example:
-        processor = CoreProcessor({'mode': ProcessingMode.PARALLEL})
-        result = processor.execute(data)
+        >>> processor = DataProcessor({'mode': ProcessMode.FAST})
+        >>> results = processor.batch_process(items)
         
     Note:
-        Instances are thread-safe after initialization.
+        Instances are thread-safe but not process-safe.
+        Use multiprocessing.Queue for IPC.
     """
 ```
 
-#### 3.3.5 Supporting API Documentation Standards
+#### 3.3.2 Examples as Specification
 
-Supporting functionality MUST explain its relationship to the core API:
-
-```python
-def create_default_processor() -> CoreProcessor:
-    """
-    Factory function creating processor with standard configuration.
-    
-    Creates a CoreProcessor optimized for general-purpose use.
-    
-    Returns:
-        Configured CoreProcessor ready for use
-        
-    See Also:
-        - CoreProcessor: For custom configuration
-        - ProcessorBuilder: For complex configurations
-    """
-    ...
-```
-
-### 3.4 Complete Structure Example
-
-A complete API specification following the recommended structure demonstrates proper organization and documentation depth. See Section 8 for full examples.
-
-## 4. Documentation Standards
-
-### 4.1 Class Documentation
-
-Every exported class MUST include:
-
-```python
-class ExportedClass:
-    """
-    Single-line purpose statement.
-    
-    Extended description explaining behavior and guarantees.
-    
-    Args:
-        param: Parameter purpose and constraints
-        
-    Raises:
-        ValueError: When and why raised
-        
-    Example:
-        >>> instance = ExportedClass(param=value)
-        >>> instance.method()
-    """
-```
-
-### 4.2 Method Documentation
-
-Public methods MUST document:
-- Purpose and behavior
-- Parameter semantics (beyond type information)
-- Return value meaning
-- Side effects
-- Exception conditions
-
-### 4.3 Type Alias Documentation
-
-Type aliases MUST include purpose:
-
-```python
-ConfigDict: TypeAlias = dict[str, Any]
-"""Configuration options for initialization."""
-```
-
-### 4.4 Protocol Documentation
-
-Protocols MUST describe the contract:
-
-```python
-class HandlerProtocol(Protocol):
-    """
-    Contract for event handlers.
-    
-    Implementers must handle events without raising
-    exceptions and support optional lifecycle methods.
-    """
-    def __call__(self, event: Event) -> None: ...
-```
-
-### 4.5 Examples as Specification
-
-Examples in API specifications serve as both teaching aids and behavioral contracts:
-
-**Demonstrative Examples**: Show correct usage patterns
-**Contractual Examples**: Define guaranteed behaviors
+Examples define guaranteed behaviors:
 
 ```python
 def batch_process(items: list[T]) -> list[Result[T]]:
@@ -538,461 +288,437 @@ def batch_process(items: list[T]) -> list[Result[T]]:
     Process items preserving order.
     
     Example:
-        # Order preservation is guaranteed
-        results = batch_process([a, b, c])
-        assert results[0].input == a
-        assert results[1].input == b
-        assert results[2].input == c
+        >>> # Order preservation is GUARANTEED
+        >>> results = batch_process([a, b, c])
+        >>> assert results[0].source == a
+        >>> assert results[1].source == b
+        >>> assert results[2].source == c
     """
 ```
 
-The example establishes order preservation as a contractual guarantee.
+The example establishes order preservation as a contractual guarantee, not mere implementation detail.
 
-## 5. Export Design Principles
+### 3.4 Export Design
 
-### 5.1 Export Decision Framework
+#### 3.4.1 The Fundamental Constraint
 
-Exports are chosen based on design intent, not mere availability:
-
-**Fundamental Constraint**: API specifications MUST only export names that exist in the implementation. Stubs document the designed subset of existing functionality - they MUST NOT introduce new names, type aliases, or constructs not present in the actual code.
+API specifications MUST only export names that exist in the implementation. Stubs document the designed subset of existing functionality.
 
 ```python
 # implementation.py
 class Engine: ...
-EngineConfig = dict[str, Any]  # Exists in implementation
+EngineConfig = dict[str, Any]
 
 # implementation.pyi
-class Engine: ...              # ✓ Good: Exists in implementation
-EngineConfig: TypeAlias = dict[str, Any]  # ✓ Good: Documents existing alias
+class Engine: ...  # ✓ Exists in implementation
+EngineConfig: TypeAlias = dict[str, Any]  # ✓ Documents existing alias
 
-# WRONG: Adding names that don't exist
-EngineOptions: TypeAlias = dict[str, Any]  # ✗ Bad: Not in implementation
+# WRONG: Creating new names
+EngineOptions: TypeAlias = dict[str, Any]  # ✗ Not in implementation
 ```
 
-**Export Criteria** - A name should be exported when it:
-1. Forms part of the intended user interface
-2. Provides clear value without implementation knowledge
-3. Maintains stability within major versions
-4. Supports static analysis and IDE discovery
+#### 3.4.2 Three-Tier Model as Decision Framework
 
-**Non-Export Criteria** - A name should NOT be exported when it:
-1. Requires implementation understanding
-2. May change frequently
-3. Exists primarily for internal use
-4. Provides multiple ways to accomplish the same task
+Export decisions create different stability commitments:
 
-### 5.2 Export Categories
+```python
+# Tier 1: Export with major version guarantee
+class DataProcessor:  # In .pyi file
+    """Core functionality users depend on."""
+    
+# Tier 2: Public but not exported  
+def optimize_internals():  # In .py only
+    """Useful but may change."""
+    
+# Tier 3: Private implementation
+def _parse_config():  # In .py only
+    """Implementation detail."""
+```
 
-**Primary Exports** (Always include)
+**Evolution Pattern**: Features migrate upward through tiers as they stabilize:
+```
+_experimental_feature → feature → exported feature
+```
+
+#### 3.4.3 Progressive Disclosure
+
+APIs guide users through complexity layers:
+
+```python
+"""
+## Basic Usage (Start here)
+    from library import process
+    result = process(data)
+
+## Advanced Usage (When needed)
+    from library import Process
+    proc = Process(custom_config)
+    result = proc.run(data)
+
+## Extension (Power users)
+    from library.core import BaseProcessor  # No stub
+    class Custom(BaseProcessor): ...
+"""
+```
+
+#### 3.4.4 Export Categories
+
+**Primary Exports** (Always include):
 - Core functionality users directly interact with
-- Configuration and initialization patterns  
+- Configuration and initialization patterns
 - Context managers for resource handling
 - Type definitions clarifying contracts
 
-**Secondary Exports** (Include when valuable)
+**Secondary Exports** (Include when valuable):
 - Convenience functions and helpers
 - Alternative constructors
 - Specialized error types
 - Advanced configuration options
 
-**Non-Exports** (Exclude even if public)
+**Non-Exports** (Exclude even if public):
 - Implementation base classes
 - Internal helpers (even without underscore)
 - Debugging utilities
 - Complex overloads
 
-### 5.3 Naming Hierarchy
+## 4. Technical Requirements
 
-Libraries have three levels of names with different guarantees:
+### 4.1 Type Annotations
 
-```python
-# 1. Private Names - No guarantees, can change anytime
-_internal_function()  # From any module
-library._internal.py  # Private module
-
-# 2. Public Names - Stable within minor versions (1.2.x)
-public_function()     # From any module  
-library/public.py     # Public module (no underscore)
-
-# 3. Exported Names - Stable within major versions (1.x.x)
-exported_function()   # Listed in a .pyi file at intended import point
-# These are the PUBLIC names that appear in API specifications
-```
-
-Example:
-```python
-# library/engine.py - PUBLIC module
-class Engine: ...         # PUBLIC name
-def start_engine(): ...   # PUBLIC name
-def _initialize(): ...    # PRIVATE name
-
-# library/__init__.py
-from .engine import Engine, start_engine
-__all__ = ['Engine']      # Only Engine is EXPORTED
-
-# library/__init__.pyi - API specification
-class Engine: ...         # EXPORTED name (in stub)
-# start_engine is PUBLIC but not EXPORTED (not in stub)
-```
-
-### 5.4 Versioning Guarantees
-
-The three-tier system provides different stability guarantees:
-
-- **Private Names** (underscore prefix): 
-  - NO guarantees
-  - May change in any release (1.2.3 → 1.2.4)
-  - Example: `_helper()`, `library/_internal.py`
-
-- **Public Names** (no underscore, not in stubs):
-  - Stable within minor versions
-  - Breaking changes require minor version bump (1.2.x → 1.3.0)
-  - Example: `library.utils.helper()` when `helper` isn't in any `.pyi`
-
-- **Exported Names** (in API specifications):
-  - Stable within major versions
-  - Breaking changes require major version bump (1.x.x → 2.0.0)
-  - Example: `library.Process` when `Process` is in `library/__init__.pyi`
-
-This creates a clear migration path:
-1. Experimental features start as private (`_feature`)
-2. Mature to public but not exported (`feature`)
-3. Stabilize as exported (in `.pyi` file)
-
-## 6. Type Annotations
-
-### 6.1 Type Completeness
+#### 4.1.1 Completeness
 
 All exported names MUST have complete type annotations:
 
 ```python
+# Complete annotations required
 def process(data: bytes, *, timeout: float = 30.0) -> Result: ...
-```
 
-### 6.2 Generic Types
-
-Generic types SHOULD use descriptive type variables:
-
-```python
-from typing import TypeVar
-
+# Type variables for generics
 T = TypeVar('T')
 ConfigT = TypeVar('ConfigT', bound=BaseConfig)
 ```
 
-### 6.3 Union Types
+#### 4.1.2 Type Aliases as Documentation
 
-Prefer `Union` types that reflect actual usage:
+Type aliases clarify complex types without runtime overhead:
 
 ```python
-# Good: Reflects actual return possibilities
-def parse(text: str) -> Union[Document, ParseError]: ...
+# Cognitive simplification
+JsonDict: TypeAlias = dict[str, Union[str, int, float, bool, None]]
+"""JSON-serializable dictionary."""
 
-# Avoid: Too permissive
-def parse(text: str) -> Any: ...
+# Domain expression
+Port: TypeAlias = int
+"""Network port (0-65535)."""
 ```
 
-### 6.4 Type Annotations as Domain Language
+### 4.2 Import Requirements
 
-Type annotations express computational constraints without introducing new abstractions:
+All specifications begin with:
 
-**Constraint Expression**
 ```python
-# Good: Constrains using existing types
-Status = Literal['pending', 'active', 'complete']
-Port = int  # Document constraints: "Port (0-65535)"
+from __future__ import annotations  # REQUIRED first line
 
-# Avoid: Creating new runtime types
-PositiveInt = NewType('PositiveInt', int)  # Don't add
+# Standard library types
+from typing import Protocol, TypeAlias, Any
+from collections.abc import Sequence, Mapping
+
+# External dependencies
+import numpy as np
+
+# Own package (absolute imports only)
+from mypackage.types import SharedType  # Never: from .types
 ```
 
-**Cognitive Simplification**
-```python
-# Good: Simplifies complex composition  
-JsonDict = dict[str, Union[str, int, float, bool, None, list, dict]]
+### 4.3 Validation Requirements
 
-# Avoid: Needless aliasing
-StringType = str  # No cognitive benefit
+Specifications MUST:
+- Pass `mypy --strict` without errors
+- Include all exported names from implementation
+- Provide documentation for every export
+- Demonstrate key usage patterns
+
+Design quality metrics:
+- Export surface minimized
+- Each export has single clear purpose
+- Progressive complexity layers maintained
+- Static analysis fully supported
+
+### 4.4 Formatting Standards
+
+#### Section Ordering
+
+Within each section, order by dependency and complexity:
+
+**Type Definitions Section**:
+1. Simple type aliases
+2. Enums
+3. Complex type aliases (using other types)
+4. Protocols (simplest to most complex)
+
+**Core API Section**:
+1. Primary classes/functions users interact with most
+2. Essential data structures
+3. Main processing functions
+4. Configuration classes
+
+**Supporting API Section**:
+1. Factory functions for core types
+2. Utility functions
+3. Helper classes
+4. Advanced/specialized functionality
+
+### 4.5 Tooling Integration
+
+Libraries SHOULD:
+- Include `py.typed` marker for type checking
+- Validate import paths match stub locations
+- Test that public imports work as documented
+
+**Testing Specifications**:
+```python
+# Test that exports match implementation
+def test_exports_exist():
+    from library import Process  # From stub
+    assert hasattr(library, 'Process')  # In implementation
+
+# Test behavioral contracts
+def test_order_preservation():
+    # Based on example in API spec
+    results = batch_process([a, b, c])
+    assert results[0].input == a  # Guaranteed by spec
 ```
 
-## 7. Progressive Usage Disclosure
+## 5. API Evolution
 
-### 7.1 Layered API Design
+### 5.1 Progressive Exposure Strategy
 
-APIs should guide users through progressive complexity layers:
+Start minimal, expand based on demonstrated need:
 
-**Layer 1: Primary Interface** (Highly Prescribed)
-Core functionality for 90% of use cases. Fully documented in stubs with clear examples.
+1. **Initial Release**: Export core functionality only
+2. **User Feedback**: Identify missing conveniences
+3. **Incremental Growth**: Add exports based on actual usage
+4. **Avoid Speculation**: Don't export "might be useful" features
 
-**Layer 2: Advanced Features** (Moderately Prescribed)  
-Power-user features with additional complexity. Documented in stubs but may require more understanding.
+### 5.2 Stability Migration
 
-**Layer 3: Extension Points** (Loosely Guided)
-Public but non-exported APIs for extending functionality. Users accept minor version instability.
+Moving between tiers:
 
-**Layer 4: Implementation Details** (Unprescribed)
-Private or internal APIs. No guarantees provided.
-
-### 7.2 Layer Documentation
-
-Each layer requires different documentation approaches:
-
+**Private → Public**: Remove underscore, document behavior
 ```python
-"""
-## Usage Patterns
-
-### Standard Usage (Layer 1)
-Most users should start here:
-    from library import process
-    result = process(data)
-
-### Advanced Usage (Layer 2)  
-For complex requirements:
-    from library import Process
-    proc = Process(custom_config)
-    result = proc.run(data)
-
-### Extension (Layer 3)
-For framework extensions (less stable):
-    from library.core import BaseProcessor  # Note: No stub
-    class Custom(BaseProcessor): ...
-"""
+# v1.0: _helper() is private
+# v1.1: helper() becomes public (no stub yet)
 ```
 
-### 7.3 Deprecation Management
+**Public → Exported**: Add to stub with full documentation
+```python
+# v2.0: helper() added to stub (major version for new export)
+```
 
-Managing API evolution through the layers:
+**Exported → Deprecated**: Mark in stub, provide migration
+```python
+# v3.0: @deprecated("Use new_helper")
+# v4.0: Removed from stub
+# v5.0: Made private or removed entirely
+```
+
+### 5.3 Breaking Change Management
+
+Handle breaking changes through clear communication:
 
 ```python
-import warnings
-from typing import deprecated
+# v2.x - Add deprecation
+@deprecated("Parameter 'old' renamed to 'new' in v3.0")
+def function(old: str = None, new: str = None) -> None:
+    """..."""
 
-@deprecated("Use new_function instead")
-def old_function() -> None:
-    """
-    Deprecated: Will be removed in v3.0.
-    
-    Use new_function() for improved performance.
-    """
-    warnings.warn(
-        "old_function is deprecated, use new_function",
-        DeprecationWarning,
-        stacklevel=2
-    )
+# v3.0 - Remove deprecated parameter
+def function(new: str) -> None:
+    """..."""
+```
+
+## 6. Patterns and Examples
+
+### 6.1 Special Cases
+
+#### 6.1.1 Properties
+
+```python
+@property
+def timeout(self) -> float:
+    """Request timeout in seconds (0.1-300.0)."""
+    ...
+
+@timeout.setter
+def timeout(self, value: float) -> None: ...
+```
+
+#### 6.1.2 Context Managers
+
+```python
+def __enter__(self) -> Self:
+    """Acquire resources and return self."""
+    ...
+
+def __exit__(self, *args: Any) -> None:
+    """Release resources, never suppresses exceptions."""
     ...
 ```
 
-Migration strategy:
-1. Add deprecation warning in minor release
-2. Remove from stub in next major release
-3. Move to private name in following major release
-
-## 8. Examples
-
-### 8.1 Complete API Specification
-
-Example of a package with unified API surface:
+#### 6.1.3 Alternative Constructors
 
 ```python
-# library/__init__.pyi
-# ruff: noqa: F811
-"""Event handling system for asynchronous operations.
-
-Provides a flexible event dispatch mechanism supporting multiple
-handlers, filtering, and async execution. Designed for building
-reactive applications with loose coupling between components.
-
-## Quick Start
-
-    from events import EventBus, Event
-    
-    bus = EventBus()
-    bus.subscribe('user.login', handle_login)
-    bus.publish(Event('user.login', user_id=123))
-
-## Mental Model
-
-Events flow through a pipeline of handlers, each potentially
-transforming or reacting to the event. The bus ensures reliable
-delivery and error isolation.
-
-## Usage Guidelines
-
-Subscribe handlers to specific event types using dot-notation patterns.
-Handler exceptions are logged but don't interrupt event flow.
-"""
-
-from __future__ import annotations
-from typing import Protocol, TypeAlias, Any, Callable, Optional
-
-# =============================================================================
-# API Type Aliases, Protocols, Enums
-# =============================================================================
-
-EventType: TypeAlias = str
-"""Dot-separated event type identifier."""
-
-EventData: TypeAlias = dict[str, Any]
-"""Arbitrary event payload data."""
-
-class EventHandler(Protocol):
+@classmethod
+def from_json(cls, data: str) -> Self:
     """
-    Contract for event handlers.
-    
-    Handlers process events without raising exceptions.
-    Failed handlers should log errors internally.
-    """
-    def __call__(self, event: Event) -> None: ...
-
-# =============================================================================
-# API Core Types & Functionality
-# =============================================================================
-
-class Event:
-    """
-    Immutable event with type and data.
-    
-    Events represent state changes or signals in the system.
-    Once created, events cannot be modified.
+    Construct from JSON string.
     
     Args:
-        type: Dot-separated event identifier
-        **data: Arbitrary event payload
+        data: Valid JSON matching schema
         
-    Example:
-        event = Event('user.action', action='click', target='button')
+    Raises:
+        JSONDecodeError: Malformed JSON
+        ValidationError: Schema violation
     """
-    def __init__(self, type: EventType, **data: Any) -> None: ...
-    
-    @property
-    def type(self) -> EventType:
-        """Event type identifier."""
-        ...
-    
-    @property
-    def data(self) -> EventData:
-        """Event payload data."""
-        ...
-
-class EventBus:
-    """
-    Central event distribution system.
-    
-    Manages handler registration and event routing with
-    support for wildcards and filtering.
-    """
-    def __init__(self) -> None: ...
-    
-    def subscribe(self, pattern: str, handler: EventHandler) -> None:
-        """Register handler for event pattern."""
-        ...
-    
-    def publish(self, event: Event) -> None:
-        """Distribute event to matching handlers."""
-        ...
-
-# Note: Implementation may be spread across multiple internal modules
-# (_events.py, _bus.py, _handlers.py) but the API surface is unified
+    ...
 ```
 
-### 8.2 Multiple Import Points Example
+#### 6.1.4 Operator Overloading
 
-Example of a package with separate module imports:
+Export operators only for types where they're naturally expected:
 
 ```python
-# library/client.pyi - Users import: from library.client import Client
-"""Synchronous client for API access."""
+# Good: Mathematical type
+class Vector:
+    def __add__(self, other: Vector) -> Vector:
+        """Vector addition."""
+        ...
 
-from __future__ import annotations
-
-class Client:
-    """Synchronous API client."""
-    def __init__(self, url: str) -> None: ...
-    def get(self, path: str) -> Response: ...
-
-# library/async_client.pyi - Users import: from library.async_client import AsyncClient  
-"""Asynchronous client for API access."""
-
-from __future__ import annotations
-
-class AsyncClient:
-    """Asynchronous API client."""
-    def __init__(self, url: str) -> None: ...
-    async def get(self, path: str) -> Response: ...
-
-# library/__init__.py might be empty or just provide version info
-# No library/__init__.pyi needed if it exports nothing
+# Avoid: Domain type without natural operators
+class User:
+    # Don't export __add__ for arbitrary types
+    ...
 ```
 
-### 8.3 Three-Tier Example
+### 6.2 Complete Example
 
-Complete example showing private, public, and exported names:
+Demonstrating all concepts in practice:
 
 ```python
-# library/data.py - PUBLIC module (no underscore)
-"""Data processing utilities."""
+# library/processor.py - Full implementation
+"""Data processing implementation."""
 
-def process(data: bytes) -> str:
-    """Process raw data."""  # PUBLIC function
-    return _normalize(_parse(data))
+from typing import Protocol
+import json
 
-def validate(data: str) -> bool:
-    """Validate processed data."""  # PUBLIC function
-    return len(data) > 0
+class Validator(Protocol):
+    """Validation protocol."""
+    def validate(self, data: str) -> bool: ...
 
-def _parse(data: bytes) -> str:
-    """Internal parsing."""  # PRIVATE function
-    return data.decode()
+class Processor:
+    """Main processing class."""
+    
+    def __init__(self, validator: Validator) -> None:
+        self._validator = validator
+    
+    def process(self, data: bytes) -> str:
+        """Process data with validation."""
+        result = self._parse(data)
+        if not self._validator.validate(result):
+            raise ValueError("Validation failed")
+        return result
+    
+    def _parse(self, data: bytes) -> str:
+        """Internal parsing logic."""
+        return data.decode('utf-8').strip()
 
-def _normalize(text: str) -> str:
-    """Internal normalization."""  # PRIVATE function  
-    return text.strip()
-
-# library/__init__.py
-from .data import process  # Only importing process
-__all__ = ['process']      # Only exporting process
+def create_processor() -> Processor:
+    """Factory with default validator."""
+    from ._validators import DefaultValidator
+    return Processor(DefaultValidator())
 
 # library/__init__.pyi - API Specification
-"""Data processing library with stable API."""
+"""
+Data processing library with validation.
+
+## Quick Start
+    from library import process
+    result = process(b'raw data')
+"""
+
+from __future__ import annotations
+from typing import Protocol
+
+class Validator(Protocol):
+    """Contract for data validators."""
+    def validate(self, data: str) -> bool: ...
+
+class Processor:
+    """
+    Data processor with pluggable validation.
+    
+    Args:
+        validator: Validation implementation
+        
+    Example:
+        >>> proc = Processor(CustomValidator())
+        >>> proc.process(b'data')
+    """
+    def __init__(self, validator: Validator) -> None: ...
+    
+    def process(self, data: bytes) -> str:
+        """
+        Process bytes to validated string.
+        
+        Raises:
+            ValueError: Validation failure
+        """
+        ...
 
 def process(data: bytes) -> str:
-    """Process raw data with validation."""
+    """
+    Simple processing with default validation.
+    
+    Example:
+        >>> process(b'  hello  ')
+        'hello'
+    """
     ...
-
-# Status:
-# - process: EXPORTED (in stub) - major version guarantee
-# - validate: PUBLIC (no underscore) - minor version guarantee  
-# - _parse, _normalize: PRIVATE - no guarantees
-# - data.py: PUBLIC module but no stub (not an intended import point)
 ```
 
-### 8.4 Anti-Patterns
+### 6.3 Anti-patterns
 
+**Avoid Creating stubs for non-exported public modules**:
 ```python
-# AVOID: Creating stubs for non-exported public modules
+# WRONG: Not an intended import point
 library/
-├── __init__.py       # from .data import process
 ├── __init__.pyi      # def process(): ...
-├── data.py           # Public module with multiple functions
-└── data.pyi          # WRONG: Not an intended import point
+├── data.py           # Public module
+└── data.pyi          # WRONG: Stub without design intent
+```
 
-# AVOID: Documenting public but non-exported names in stubs
+**Avoid Documenting public but non-exported names**:
+```python
 # library/__init__.pyi
 def process(): ...    # Exported
-def validate(): ...   # WRONG: Public but not exported (not in __init__.py)
+def validate(): ...   # WRONG: Public but not in __init__.py
+```
 
-# AVOID: Exposing internal structure
+**Avoid Exposing internal structure**:
+```python
 # __init__.pyi  
 from ._internal import InternalClass  # Never expose private modules
+```
 
-# AVOID: Creating stubs without clear import intent
+**Avoid Creating stubs without clear import intent**:
+```python
 library/
 └── utils/
     ├── helpers.py    # Public module
     └── helpers.pyi   # Only if users should import from library.utils.helpers
 ```
 
-### 8.5 Export Curation Example
+### 6.4 Export Curation Example
 
 Implementation contains many names, but exports are curated:
 
@@ -1019,255 +745,50 @@ class ProcessorError(Exception): ... # EXPORTED - User-facing error
 # - debug_processor: Not for production use
 ```
 
-This demonstrates thoughtful interface curation.
+## 7. Reference
 
-## 9. Conformance
+### 7.1 Conformance Checklist
 
-### 9.1 Specification Validation
+- [ ] All exported names exist in implementation
+- [ ] Complete type annotations on all exports
+- [ ] Documentation for every exported name
+- [ ] Examples demonstrate key patterns
+- [ ] Passes `mypy --strict`
+- [ ] Progressive disclosure structure
+- [ ] Three-tier model applied consistently
+- [ ] `py.typed` marker included
+- [ ] Section formatting follows standard
 
-API specifications MUST pass type checking and validate design quality:
+### 7.2 Quick Reference
 
-**Type Checking Requirements**
-- Pass `mypy --strict` without errors
-- All exported names have complete annotations
-- No undefined names referenced
+| Concept | Implementation |
+|---------|---------------|
+| Export name | Include in `.pyi` file |
+| Hide name | Omit from `.pyi` file |
+| Private name | Prefix with underscore |
+| Type alias | `TypeAlias` annotation |
+| Protocol | `Protocol` base class |
+| Stability | Major version guarantee |
+| Section separator | `# ===...===` |
+| Import order | future → typing → stdlib → external → package |
 
-**Completeness Checks**
-- All exports are self-documented
-- Examples demonstrate key usage patterns
-- Behavioral guarantees are explicit
+### 7.3 Glossary
 
-**Design Quality Metrics**  
-- Export surface minimized
-- Each export has single clear purpose
-- Progressive complexity layers maintained
-- Static analysis fully supported
+**Export**: Include name in API specification, granting major version stability
 
-### 9.2 Import Path Verification
+**Internal Module**: Implementation module not intended for direct import
 
-Specifications MUST align with import patterns:
+**Prescriptive**: Defining intended usage rather than available functionality
 
-```python
-# If users can do this:
-from library import Thing
-# Then library/__init__.pyi must define Thing
+**Progressive Disclosure**: Revealing complexity in guided layers
 
-# If users can do this:  
-from library.module import Other
-# Then library/module.pyi must define Other
-```
+**Stub File**: `.pyi` file containing API specifications
 
-### 9.3 Tooling
+**Three-Tier Model**: Private/Public/Exported access levels with different guarantees
 
-Libraries SHOULD:
-- Include `py.typed` marker for type checking
-- Validate import paths match stub locations
-- Test that public imports work as documented
-
-### 9.4 Testing Specifications
-
-Validate specifications through testing:
-
-```python
-# Test that exports match implementation
-def test_exports_exist():
-    from library import Process  # From stub
-    assert hasattr(library, 'Process')  # In implementation
-
-# Test behavioral contracts
-def test_order_preservation():
-    # Based on example in API spec
-    results = batch_process([a, b, c])
-    assert results[0].input == a  # Guaranteed by spec
-```
-
-## 10. Special Case Patterns
-
-### 10.1 Properties
-
-Properties require special documentation consideration:
-
-**Read-Only Properties**
-```python
-@property
-def name(self) -> str:
-    """Entity name (read-only)."""
-    ...
-```
-
-**Read-Write Properties**
-```python
-@property
-def timeout(self) -> float:
-    """Request timeout in seconds (0.1-300.0)."""
-    ...
-
-@timeout.setter
-def timeout(self, value: float) -> None: ...
-```
-
-Export when properties provide the natural interface for attribute access.
-
-### 10.2 Alternative Constructors
-
-Class methods providing construction variants:
-
-```python
-@classmethod
-def from_json(cls, data: str) -> Self:
-    """
-    Construct from JSON string.
-    
-    Args:
-        data: Valid JSON matching expected schema
-        
-    Raises:
-        JSONDecodeError: Invalid JSON
-        ValidationError: Schema mismatch
-    """
-    ...
-```
-
-Always export alternative constructors that provide user-facing initialization.
-
-### 10.3 Context Managers
-
-Export when resource management is user-facing:
-
-```python
-def __enter__(self) -> Self:
-    """Acquire connection and return self."""
-    ...
-
-def __exit__(self, *args: Any) -> None:
-    """Release connection, never suppresses exceptions."""
-    ...
-```
-
-### 10.4 Operator Overloading
-
-Export operators only for types where they're naturally expected:
-
-```python
-# Good: Mathematical type
-class Vector:
-    def __add__(self, other: Vector) -> Vector:
-        """Vector addition."""
-        ...
-
-# Avoid: Business object
-class User:
-    def __add__(self, other: User) -> User:  # Don't export
-        ...
-```
-
-### 10.5 Overloaded Functions
-
-Limit overloads to improve clarity:
-
-```python
-# Good: Clear distinction
-@overload
-def get(self, key: str) -> str: ...
-@overload
-def get(self, key: str, default: T) -> str | T: ...
-
-# Avoid: Too many variants
-@overload
-def process(self, data: str) -> str: ...
-@overload
-def process(self, data: bytes) -> bytes: ...
-@overload
-def process(self, data: list[str]) -> list[str]: ...
-# ... many more overloads
-```
-
-### 10.6 Async Patterns
-
-Export async interfaces when I/O operations are involved:
-
-```python
-async def fetch(self, url: str) -> Response:
-    """
-    Fetch URL asynchronously.
-    
-    Must be awaited. Handles connection pooling internally.
-    """
-    ...
-```
-
-### 10.7 Type Variables and Generics
-
-Document type relationships clearly:
-
-```python
-T = TypeVar('T')
-"""Type variable for generic containers."""
-
-K = TypeVar('K', bound=Hashable)
-"""Hashable key type for mappings."""
-
-class Container(Generic[T]):
-    """
-    Generic container for homogeneous items.
-    
-    Type parameter T is preserved through all operations.
-    """
-    def add(self, item: T) -> None: ...
-    def get_all(self) -> list[T]: ...
-```
-
-## 11. API Evolution
-
-### 11.1 Progressive Exposure Strategy
-
-Start minimal, expand based on demonstrated need:
-
-1. **Initial Release**: Export core functionality only
-2. **User Feedback**: Identify missing conveniences
-3. **Incremental Growth**: Add exports based on actual usage
-4. **Avoid Speculation**: Don't export "might be useful" features
-
-### 11.2 Stability Migration
-
-Moving between tiers:
-
-**Private → Public**: Remove underscore, document behavior
-```python
-# v1.0: _helper() is private
-# v1.1: helper() becomes public (no stub yet)
-```
-
-**Public → Exported**: Add to stub with full documentation
-```python
-# v2.0: helper() added to stub (major version for new export)
-```
-
-**Exported → Deprecated**: Mark in stub, provide migration
-```python
-# v3.0: @deprecated("Use new_helper")
-# v4.0: Removed from stub
-# v5.0: Made private or removed entirely
-```
-
-### 11.3 Breaking Change Management
-
-Handle breaking changes through clear communication:
-
-```python
-# v2.x - Add deprecation
-@deprecated("Parameter 'old' renamed to 'new' in v3.0")
-def function(old: str = None, new: str = None) -> None:
-    """..."""
-
-# v3.0 - Remove deprecated parameter
-def function(new: str) -> None:
-    """..."""
-```
-
-## 12. References
+### 7.4 References
 
 - PEP 484 - Type Hints
-- PEP 561 - Distributing Type Information
+- PEP 561 - Distributing Type Information  
 - PEP 3119 - Protocol Classes
 - RFC 2119 - Requirement Levels

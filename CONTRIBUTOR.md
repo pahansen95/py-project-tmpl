@@ -299,6 +299,7 @@ class Parseable(Protocol):
 - 100% of dataclass fields
 - 80% minimum of internal functions that cross module boundaries
 - 0% required for single-use private helpers
+- For exported APIs, see specification standard for requirements
 
 **Required Protocol Usage**:
 
@@ -425,6 +426,10 @@ Use two-phase initialization when:
 - Components need multiple configurations (test/prod)
 - Framework extensions require delayed configuration
 - Circular dependency resolution is needed
+
+**API Specifications**:
+
+APIs represent the highest-level contracts in your system - the promises you make to external users. For comprehensive guidance on designing, documenting, and maintaining Python APIs using stub files and the three-tier stability model, see the [Python API Specification Standard](./docs/PyAPISpec.md).
 
 #### Forbidden Patterns
 

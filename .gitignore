@@ -36,6 +36,10 @@
 !docs/**/*.png
 !docs/**/*.jpg
 !docs/**/*.svg
+!docs/**/*.html
+!docs/**/*.css
+!docs/**/*.js
+!docs/**/*.ts
 
 # INCLUDE: Helpers Folder & Contained Python Source Files, Scripts & Documents
 !helpers/

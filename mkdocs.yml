@@ -5,13 +5,11 @@ site_url: https://github.com/pahansen95/py-project-tmpl
 nav:
   - Home: index.md
   - Welcome Guide:
-    - Quick Start: welcome/quickstart.md
     - Overview: welcome/index.md
-    - Concepts: welcome/concepts.md
     - Setup: welcome/setup.md
     - Workflow: welcome/workflow.md
-    - Practice: welcome/practice.md
     - Reference: welcome/reference.md
+    - Quick Reference Card: welcome/quick-reference-card.md
   - API Documentation:
     - Overview: api/index.md
     - Modules: api/modules.md

@@ -19,9 +19,16 @@ gh pr create --title "Title" --body "Description"
 
 ### Setup
 ```bash
+# Clone repository
 git clone https://github.com/pahansen95/py-project-tmpl.git
 cd py-project-tmpl
-uv venv && source .venv/bin/activate
+
+# Create & activate environment
+uv venv
+source .venv/bin/activate      # macOS/Linux
+.venv\Scripts\activate         # Windows
+
+# Install dependencies
 uv pip install -e ".[dev]"
 ```
 

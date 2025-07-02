@@ -216,16 +216,55 @@ git log origin/main..HEAD --oneline && git status --porcelain
 **Expected**: Commits listed, no uncommitted changes
 
 ### Health Check Script
-```bash
-# Save as check-health.sh
-#!/bin/bash
-echo "=== Git Health Check ==="
-git status --porcelain && echo "✓ Clean working directory" || echo "✗ Uncommitted changes"
-git rev-parse --abbrev-ref HEAD | grep -v main && echo "✓ On feature branch" || echo "✗ On main branch"
-pytest --quiet && echo "✓ Tests pass" || echo "✗ Tests fail"
-ruff check . --quiet && echo "✓ Code quality good" || echo "✗ Code issues found"
-echo "=== Ready to commit: $([ $? -eq 0 ] && echo "YES" || echo "NO") ==="
-```
+
+=== "Windows"
+    ```powershell
+    # Save as check-health.ps1
+    Write-Host "=== Git Health Check ==="
+    
+    # Check working directory
+    if (!(git status --porcelain)) {
+        Write-Host "✓ Clean working directory" -ForegroundColor Green
+    } else {
+        Write-Host "✗ Uncommitted changes" -ForegroundColor Red
+    }
+    
+    # Check branch
+    $branch = git rev-parse --abbrev-ref HEAD
+    if ($branch -ne "main") {
+        Write-Host "✓ On feature branch: $branch" -ForegroundColor Green
+    } else {
+        Write-Host "✗ On main branch" -ForegroundColor Red
+    }
+    
+    # Run tests
+    $testResult = pytest --quiet 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✓ Tests pass" -ForegroundColor Green
+    } else {
+        Write-Host "✗ Tests fail" -ForegroundColor Red
+    }
+    
+    # Check code quality
+    $ruffResult = ruff check . --quiet 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✓ Code quality good" -ForegroundColor Green
+    } else {
+        Write-Host "✗ Code issues found" -ForegroundColor Red
+    }
+    ```
+
+=== "macOS/Linux"
+    ```bash
+    # Save as check-health.sh
+    #!/bin/bash
+    echo "=== Git Health Check ==="
+    git status --porcelain && echo "✓ Clean working directory" || echo "✗ Uncommitted changes"
+    git rev-parse --abbrev-ref HEAD | grep -v main && echo "✓ On feature branch" || echo "✗ On main branch"
+    pytest --quiet && echo "✓ Tests pass" || echo "✗ Tests fail"
+    ruff check . --quiet && echo "✓ Code quality good" || echo "✗ Code issues found"
+    echo "=== Ready to commit: $([ $? -eq 0 ] && echo "YES" || echo "NO") ==="
+    ```
 
 ---
 **Next**: [Quick Reference](reference.md) • **Time Investment**: As needed

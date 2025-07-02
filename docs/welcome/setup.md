@@ -20,17 +20,17 @@
 
 ## Automated Setup (5 minutes)
 
-### Windows
-```powershell
-# PowerShell as Administrator
-Set-ExecutionPolicy Bypass -Scope Process -Force
-irm https://raw.githubusercontent.com/pahansen95/py-project-tmpl/main/scripts/setup-welcome.ps1 | iex
-```
+=== "Windows"
+    ```powershell
+    # PowerShell as Administrator
+    Set-ExecutionPolicy Bypass -Scope Process -Force
+    irm https://raw.githubusercontent.com/pahansen95/py-project-tmpl/main/scripts/setup-welcome.ps1 | iex
+    ```
 
-### macOS/Linux
-```bash
-curl -sSL https://raw.githubusercontent.com/pahansen95/py-project-tmpl/main/scripts/setup-welcome.sh | bash
-```
+=== "macOS/Linux"
+    ```bash
+    curl -sSL https://raw.githubusercontent.com/pahansen95/py-project-tmpl/main/scripts/setup-welcome.sh | bash
+    ```
 
 **Script Actions**: Installs Git/Python/UV, configures environment, creates virtual environment, installs dependencies.
 
@@ -38,19 +38,86 @@ curl -sSL https://raw.githubusercontent.com/pahansen95/py-project-tmpl/main/scri
 
 ### Install Required Tools
 
-| Tool | Windows | macOS | Linux |
-|------|---------|-------|-------|
-| Git | `winget install Git.Git` | `brew install git` | `apt install git` |
-| Python | `winget install Python.Python.3.12` | `brew install python@3.12` | `apt install python3.12` |
-| UV | `irm https://astral.sh/uv/install.ps1 \| iex` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | Same as macOS |
+#### Git Installation
+
+=== "Windows"
+    ```powershell
+    winget install Git.Git
+    # Or download from https://git-scm.com/download/win
+    ```
+
+=== "macOS"
+    ```bash
+    brew install git
+    # Or: xcode-select --install
+    ```
+
+=== "Linux"
+    ```bash
+    # Ubuntu/Debian
+    sudo apt install git
+    
+    # Fedora
+    sudo dnf install git
+    
+    # Arch
+    sudo pacman -S git
+    ```
+
+#### Python Installation
+
+=== "Windows"
+    ```powershell
+    winget install Python.Python.3.12
+    # Or download from python.org
+    ```
+
+=== "macOS"
+    ```bash
+    brew install python@3.12
+    ```
+
+=== "Linux"
+    ```bash
+    # Ubuntu/Debian
+    sudo apt install python3.12 python3.12-venv
+    
+    # Fedora
+    sudo dnf install python3.12
+    
+    # Arch
+    sudo pacman -S python
+    ```
+
+#### UV Package Manager
+
+=== "Windows"
+    ```powershell
+    # PowerShell
+    irm https://astral.sh/uv/install.ps1 | iex
+    ```
+
+=== "macOS/Linux"
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
 
 ### Configure Git
 ```bash
 git config --global user.name "Your Name"
 git config --global user.email "your.email@example.com"
 git config --global init.defaultBranch main
-git config --global core.autocrlf true    # Windows
-git config --global core.autocrlf input   # macOS/Linux
+
+# Line ending configuration
+=== "Windows"
+    ```bash
+    git config --global core.autocrlf true
+    ```
+
+=== "macOS/Linux"
+    ```bash
+    git config --global core.autocrlf input
+    ```
 ```
 
 ### Project Setup
@@ -63,8 +130,19 @@ cd py-project-tmpl
 uv venv
 
 # Activate environment
-source .venv/bin/activate    # macOS/Linux
-.venv\Scripts\activate       # Windows
+=== "Windows"
+    ```powershell
+    # PowerShell
+    .venv\Scripts\activate
+    
+    # Git Bash
+    source .venv/Scripts/activate
+    ```
+
+=== "macOS/Linux"
+    ```bash
+    source .venv/bin/activate
+    ```
 
 # Install dependencies
 uv pip install -e ".[dev,docs]"
@@ -120,7 +198,7 @@ git remote -v | grep -q origin && echo "✓ Remote configured"
 | `command not found` | Restart terminal or add to PATH | 2 min |
 | `permission denied` | Run as Administrator/sudo | 1 min |
 | `SSL certificate error` | Set proxy or update certificates | 5 min |
-| `venv activation fails` | Windows: `Set-ExecutionPolicy RemoteSigned` | 2 min |
+| `venv activation fails` | Windows: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` | 2 min |
 
 ---
 **Next**: [Development Workflow](workflow.md) • **Time Investment**: 20 minutes

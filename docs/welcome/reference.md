@@ -6,7 +6,7 @@
 </div>
 
 ## Navigation
-[Commands](#command-tables) | [Troubleshooting](#troubleshooting) | [Configuration](#configuration) | [Emergency](#emergency-commands) | [Glossary](#glossary) | [Printable Card](quick-reference-card.md)
+[Commands](#command-tables) | [Platform Differences](#platform-differences) | [Troubleshooting](#troubleshooting) | [Configuration](#configuration) | [Emergency](#emergency-commands) | [Glossary](#glossary) | [Printable Card](quick-reference-card.md)
 
 ## Command Tables
 
@@ -35,6 +35,30 @@
 | Format code | `ruff format .` | Auto-format Python |
 | Check code | `ruff check .` | Find issues |
 
+## Platform Differences
+
+### Quick Reference
+| Component | Windows | macOS/Linux |
+|-----------|---------|-------------|
+| Home Directory | `%USERPROFILE%` or `$env:USERPROFILE` | `~` or `$HOME` |
+| Path Separator | `\` (backslash) | `/` (forward slash) |
+| Shell | PowerShell, Git Bash | bash, zsh |
+| Admin Mode | Run as Administrator | `sudo` prefix |
+| Line Endings | CRLF (`\r\n`) | LF (`\n`) |
+| Package Manager | `winget`, `choco` | `brew`, `apt`, `dnf` |
+
+### Path Examples
+```bash
+# SSH directory
+~/.ssh/                    # macOS/Linux
+$env:USERPROFILE\.ssh\     # Windows PowerShell
+~/.ssh/                    # Windows Git Bash
+
+# Python scripts
+python script.py           # All platforms
+python3 script.py          # Some Linux distros
+```
+
 ### Branch Operations
 | Task | Command | Result |
 |------|---------|--------|
@@ -49,13 +73,42 @@
 
 ### Authentication
 **SSH Key Setup**
-```bash
-ssh-keygen -t ed25519 -C "email@example.com"
-eval "$(ssh-agent -s)"
-ssh-add ~/.ssh/id_ed25519
-cat ~/.ssh/id_ed25519.pub  # Add to GitHub
-git remote set-url origin git@github.com:USER/REPO.git
-```
+
+=== "Windows"
+    ```powershell
+    # Generate key
+    ssh-keygen -t ed25519 -C "email@example.com"
+    
+    # Start agent (Git Bash)
+    eval "$(ssh-agent -s)"
+    
+    # Add key
+    ssh-add ~/.ssh/id_ed25519
+    
+    # Display public key
+    type $env:USERPROFILE\.ssh\id_ed25519.pub
+    
+    # Set remote URL
+    git remote set-url origin git@github.com:USER/REPO.git
+    ```
+
+=== "macOS/Linux"
+    ```bash
+    # Generate key
+    ssh-keygen -t ed25519 -C "email@example.com"
+    
+    # Start agent
+    eval "$(ssh-agent -s)"
+    
+    # Add key
+    ssh-add ~/.ssh/id_ed25519
+    
+    # Display public key
+    cat ~/.ssh/id_ed25519.pub
+    
+    # Set remote URL
+    git remote set-url origin git@github.com:USER/REPO.git
+    ```
 
 **Token Authentication**
 ```bash
@@ -102,8 +155,16 @@ git checkout correct-branch   # Switch to new branch
 git config --global user.name "Your Name"
 git config --global user.email "email@example.com"
 git config --global init.defaultBranch main
-git config --global core.autocrlf true      # Windows
-git config --global core.autocrlf input     # Mac/Linux
+# Line ending configuration
+=== "Windows"
+    ```bash
+    git config --global core.autocrlf true
+    ```
+
+=== "macOS/Linux"
+    ```bash
+    git config --global core.autocrlf input
+    ```
 git config --global pull.rebase false
 git config --global push.default current
 ```

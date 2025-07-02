@@ -37,12 +37,29 @@ git config --global user.name "Your Name"
 git config --global user.email "your.email@example.com"
 
 # Install UV package manager
-curl -LsSf https://astral.sh/uv/install.sh | sh      # Linux/macOS
-irm https://astral.sh/uv/install.ps1 | iex           # Windows PowerShell
+=== "Windows"
+    ```powershell
+    irm https://astral.sh/uv/install.ps1 | iex
+    ```
+
+=== "macOS/Linux"
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
 
 # Create Python environment
-uv venv && source .venv/bin/activate                 # Linux/macOS
-uv venv && .venv\Scripts\activate                    # Windows
+uv venv
+
+# Activate environment
+=== "Windows"
+    ```powershell
+    .venv\Scripts\activate
+    ```
+
+=== "macOS/Linux"
+    ```bash
+    source .venv/bin/activate
+    ```
 
 # Install dependencies
 uv pip install -e ".[dev]"

@@ -49,7 +49,10 @@ theme:
     repo: fontawesome/brands/github
 
 extra_css:
-  - stylesheets/welcome-progress.css
+  - stylesheets/welcome-progress-tree.css
+
+extra_javascript:
+  - javascripts/platform-tabs.js
 
 markdown_extensions:
   - admonition

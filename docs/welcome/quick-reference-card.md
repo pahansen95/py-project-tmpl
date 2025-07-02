@@ -1,71 +1,261 @@
 # Git Workflow Quick Reference Card
 
 ## Daily Workflow
-```bash
-# Start work
-git checkout main && git pull
-git checkout -b feature/task-name
 
-# Make changes & commit
-git add -A
-git commit -m "type: description"
+### Start Work
 
-# Share work
-git push -u origin feature/task-name
-gh pr create --title "Title" --body "Description"
-```
+=== "Windows"
+    ```powershell
+    git checkout main; git pull
+    git checkout -b feature/task-name
+    ```
+
+=== "macOS"
+    ```bash
+    git checkout main && git pull
+    git checkout -b feature/task-name
+    ```
+
+=== "Linux"
+    ```bash
+    git checkout main && git pull
+    git checkout -b feature/task-name
+    ```
+
+### Make Changes & Commit
+
+=== "Windows"
+    ```powershell
+    git add -A
+    git commit -m "type: description"
+    ```
+
+=== "macOS"
+    ```bash
+    git add -A
+    git commit -m "type: description"
+    ```
+
+=== "Linux"
+    ```bash
+    git add -A
+    git commit -m "type: description"
+    ```
+
+### Share Work
+
+=== "Windows"
+    ```powershell
+    git push -u origin feature/task-name
+    gh pr create --title "Title" --body "Description"
+    ```
+
+=== "macOS"
+    ```bash
+    git push -u origin feature/task-name
+    gh pr create --title "Title" --body "Description"
+    ```
+
+=== "Linux"
+    ```bash
+    git push -u origin feature/task-name
+    gh pr create --title "Title" --body "Description"
+    ```
 
 ## Essential Commands
 
 ### Setup
-```bash
-# Clone repository
-git clone https://github.com/pahansen95/py-project-tmpl.git
-cd py-project-tmpl
 
-# Create & activate environment
-uv venv
-source .venv/bin/activate      # macOS/Linux
-.venv\Scripts\activate         # Windows
+#### Clone Repository
 
-# Install dependencies
-uv pip install -e ".[dev]"
-```
+=== "Windows"
+    ```powershell
+    git clone https://github.com/pahansen95/py-project-tmpl.git
+    cd py-project-tmpl
+    ```
+
+=== "macOS"
+    ```bash
+    git clone https://github.com/pahansen95/py-project-tmpl.git
+    cd py-project-tmpl
+    ```
+
+=== "Linux"
+    ```bash
+    git clone https://github.com/pahansen95/py-project-tmpl.git
+    cd py-project-tmpl
+    ```
+
+#### Create & Activate Environment
+
+=== "Windows"
+    ```powershell
+    uv venv
+    .venv\Scripts\activate
+    ```
+
+=== "macOS"
+    ```bash
+    uv venv
+    source .venv/bin/activate
+    ```
+
+=== "Linux"
+    ```bash
+    uv venv
+    source .venv/bin/activate
+    ```
+
+#### Install Dependencies
+
+=== "Windows"
+    ```powershell
+    uv pip install -e ".[dev]"
+    ```
+
+=== "macOS"
+    ```bash
+    uv pip install -e ".[dev]"
+    ```
+
+=== "Linux"
+    ```bash
+    uv pip install -e ".[dev]"
+    ```
 
 ### Branch Management
-```bash
-git branch -v                    # List branches
-git checkout -b new-branch       # Create & switch
-git checkout main               # Switch to main
-git branch -d old-branch        # Delete local
-git push origin --delete branch # Delete remote
-```
+
+=== "Windows"
+    ```powershell
+    git branch -v                    # List branches
+    git checkout -b new-branch       # Create & switch
+    git checkout main               # Switch to main
+    git branch -d old-branch        # Delete local
+    git push origin --delete branch # Delete remote
+    ```
+
+=== "macOS"
+    ```bash
+    git branch -v                    # List branches
+    git checkout -b new-branch       # Create & switch
+    git checkout main               # Switch to main
+    git branch -d old-branch        # Delete local
+    git push origin --delete branch # Delete remote
+    ```
+
+=== "Linux"
+    ```bash
+    git branch -v                    # List branches
+    git checkout -b new-branch       # Create & switch
+    git checkout main               # Switch to main
+    git branch -d old-branch        # Delete local
+    git push origin --delete branch # Delete remote
+    ```
 
 ### Common Fixes
-```bash
-# Wrong branch
-git stash && git checkout correct-branch && git stash pop
 
-# Undo last commit
-git reset --soft HEAD~1
+#### Wrong Branch
 
-# Resolve conflicts
-git pull origin main
-# Edit files, remove <<<, ===, >>>
-git add . && git commit -m "Resolve conflicts"
+=== "Windows"
+    ```powershell
+    git stash; git checkout correct-branch; git stash pop
+    ```
 
-# Update rejected push
-git pull --rebase origin main && git push
-```
+=== "macOS"
+    ```bash
+    git stash && git checkout correct-branch && git stash pop
+    ```
+
+=== "Linux"
+    ```bash
+    git stash && git checkout correct-branch && git stash pop
+    ```
+
+#### Undo Last Commit
+
+=== "Windows"
+    ```powershell
+    git reset --soft HEAD~1
+    ```
+
+=== "macOS"
+    ```bash
+    git reset --soft HEAD~1
+    ```
+
+=== "Linux"
+    ```bash
+    git reset --soft HEAD~1
+    ```
+
+#### Resolve Conflicts
+
+=== "Windows"
+    ```powershell
+    git pull origin main
+    # Edit files, remove <<<, ===, >>>
+    git add .; git commit -m "Resolve conflicts"
+    ```
+
+=== "macOS"
+    ```bash
+    git pull origin main
+    # Edit files, remove <<<, ===, >>>
+    git add . && git commit -m "Resolve conflicts"
+    ```
+
+=== "Linux"
+    ```bash
+    git pull origin main
+    # Edit files, remove <<<, ===, >>>
+    git add . && git commit -m "Resolve conflicts"
+    ```
+
+#### Update Rejected Push
+
+=== "Windows"
+    ```powershell
+    git pull --rebase origin main; git push
+    ```
+
+=== "macOS"
+    ```bash
+    git pull --rebase origin main && git push
+    ```
+
+=== "Linux"
+    ```bash
+    git pull --rebase origin main && git push
+    ```
 
 ### Validation Commands
-```bash
-git status              # Check state
-git diff               # Review changes
-git log --oneline -5   # Recent commits
-pytest                 # Run tests
-ruff check .           # Check code
-```
+
+=== "Windows"
+    ```powershell
+    git status              # Check state
+    git diff               # Review changes
+    git log --oneline -5   # Recent commits
+    pytest                 # Run tests
+    ruff check .           # Check code
+    ```
+
+=== "macOS"
+    ```bash
+    git status              # Check state
+    git diff               # Review changes
+    git log --oneline -5   # Recent commits
+    pytest                 # Run tests
+    ruff check .           # Check code
+    ```
+
+=== "Linux"
+    ```bash
+    git status              # Check state
+    git diff               # Review changes
+    git log --oneline -5   # Recent commits
+    pytest                 # Run tests
+    ruff check .           # Check code
+    ```
 
 ## Commit Types
 - `feat:` New feature

@@ -1,8 +1,28 @@
 # Python Project Template Documentation
 
-<div class="progress-tracker">
-<span class="current">[●] Overview (10 min)</span> → <span class="upcoming">[ ] Setup (15 min)</span> → <span class="upcoming">[ ] Workflow (20 min)</span> → <span class="upcoming">[ ] Reference</span>
-<div class="progress-time">Total: 45 min | Elapsed: 0 min | Remaining: 45 min</div>
+<div class="progress-tree">
+<ul>
+  <li class="current">
+    <span class="icon">▶</span>
+    <span class="step-name">Overview</span>
+    <span class="time">(10 min)</span>
+  </li>
+  <li class="upcoming">
+    <span class="icon">○</span>
+    <span class="step-name">Setup</span>
+    <span class="time">(15 min)</span>
+  </li>
+  <li class="upcoming">
+    <span class="icon">○</span>
+    <span class="step-name">Workflow</span>
+    <span class="time">(20 min)</span>
+  </li>
+  <li class="upcoming">
+    <span class="icon">○</span>
+    <span class="step-name">Reference</span>
+    <span class="time">(as needed)</span>
+  </li>
+</ul>
 </div>
 
 ## Objectives
@@ -14,70 +34,198 @@
 
 | Requirement | Minimum Version | Verification |
 |-------------|----------------|--------------|
-| Operating System | Windows 10+, macOS 10.15+, Linux | `uname -a` |
-| Disk Space | 4GB free | `df -h` |
+| Operating System | Windows 10+, macOS 10.15+, Linux | See [System Check](#system-check) |
+| Disk Space | 4GB free | See [Disk Check](#disk-check) |
 | Internet | Stable connection | Download ~500MB |
 | Access Rights | Administrator/sudo | Required for installation |
 
 ## Fast Track (5 minutes)
 
 ### Prerequisites Check (30 seconds)
-```bash
-git --version       # Required: 2.30+
-python --version    # Required: 3.10+
-```
+
+=== "Windows"
+    ```powershell
+    git --version       # Required: 2.30+
+    python --version    # Required: 3.10+
+    ```
+
+=== "macOS"
+    ```bash
+    git --version       # Required: 2.30+
+    python3 --version   # Required: 3.10+
+    ```
+
+=== "Linux"
+    ```bash
+    git --version       # Required: 2.30+
+    python3 --version   # Required: 3.10+
+    ```
 
 ### Environment Setup (2 minutes)
-```bash
-# Clone repository
-git clone https://github.com/pahansen95/py-project-tmpl.git && cd py-project-tmpl
 
-# Configure Git identity
-git config --global user.name "Your Name"
-git config --global user.email "your.email@example.com"
+#### Clone Repository
 
-# Install UV package manager
+=== "Windows"
+    ```powershell
+    git clone https://github.com/pahansen95/py-project-tmpl.git; cd py-project-tmpl
+    ```
+
+=== "macOS"
+    ```bash
+    git clone https://github.com/pahansen95/py-project-tmpl.git && cd py-project-tmpl
+    ```
+
+=== "Linux"
+    ```bash
+    git clone https://github.com/pahansen95/py-project-tmpl.git && cd py-project-tmpl
+    ```
+
+#### Configure Git Identity
+
+=== "Windows"
+    ```powershell
+    git config --global user.name "Your Name"
+    git config --global user.email "your.email@example.com"
+    ```
+
+=== "macOS"
+    ```bash
+    git config --global user.name "Your Name"
+    git config --global user.email "your.email@example.com"
+    ```
+
+=== "Linux"
+    ```bash
+    git config --global user.name "Your Name"
+    git config --global user.email "your.email@example.com"
+    ```
+
+#### Install UV Package Manager
+
 === "Windows"
     ```powershell
     irm https://astral.sh/uv/install.ps1 | iex
     ```
 
-=== "macOS/Linux"
+=== "macOS"
     ```bash
     curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-# Create Python environment
-uv venv
+=== "Linux"
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
 
-# Activate environment
+#### Create Python Environment
+
+=== "Windows"
+    ```powershell
+    uv venv
+    ```
+
+=== "macOS"
+    ```bash
+    uv venv
+    ```
+
+=== "Linux"
+    ```bash
+    uv venv
+    ```
+
+#### Activate Environment
+
 === "Windows"
     ```powershell
     .venv\Scripts\activate
     ```
 
-=== "macOS/Linux"
+=== "macOS"
     ```bash
     source .venv/bin/activate
     ```
 
-# Install dependencies
-uv pip install -e ".[dev]"
-```
+=== "Linux"
+    ```bash
+    source .venv/bin/activate
+    ```
+
+#### Install Dependencies
+
+=== "Windows"
+    ```powershell
+    uv pip install -e ".[dev]"
+    ```
+
+=== "macOS"
+    ```bash
+    uv pip install -e ".[dev]"
+    ```
+
+=== "Linux"
+    ```bash
+    uv pip install -e ".[dev]"
+    ```
 
 ### Submit Changes (2.5 minutes)
-```bash
-# Create feature branch
-git checkout -b feature/your-change
 
-# Make changes
-echo "# Your change" >> README.md
+#### Create Feature Branch
 
-# Commit and push
-git add README.md
-git commit -m "feat: Add your change"
-git push -u origin feature/your-change
-```
+=== "Windows"
+    ```powershell
+    git checkout -b feature/your-change
+    ```
+
+=== "macOS"
+    ```bash
+    git checkout -b feature/your-change
+    ```
+
+=== "Linux"
+    ```bash
+    git checkout -b feature/your-change
+    ```
+
+#### Make Changes
+
+=== "Windows"
+    ```powershell
+    echo "# Your change" >> README.md
+    ```
+
+=== "macOS"
+    ```bash
+    echo "# Your change" >> README.md
+    ```
+
+=== "Linux"
+    ```bash
+    echo "# Your change" >> README.md
+    ```
+
+#### Commit and Push
+
+=== "Windows"
+    ```powershell
+    git add README.md
+    git commit -m "feat: Add your change"
+    git push -u origin feature/your-change
+    ```
+
+=== "macOS"
+    ```bash
+    git add README.md
+    git commit -m "feat: Add your change"
+    git push -u origin feature/your-change
+    ```
+
+=== "Linux"
+    ```bash
+    git add README.md
+    git commit -m "feat: Add your change"
+    git push -u origin feature/your-change
+    ```
 
 **Output**: URL for creating pull request
 
@@ -99,17 +247,30 @@ git push -u origin feature/your-change
 ### Required Tools
 | Tool | Purpose | Installation Check |
 |------|---------|-------------------|
-| Git 2.30+ | Version control | `git --version` |
-| Python 3.10+ | Programming language | `python --version` |
-| UV 0.4+ | Package manager | `uv --version` |
+| Git 2.30+ | Version control | See validation commands below |
+| Python 3.10+ | Programming language | See validation commands below |
+| UV 0.4+ | Package manager | See validation commands below |
 
 ## Validation Checkpoint
 
 Execute validation sequence:
-```bash
-git --version && python --version && uv --version
-```
-**Expected**: All commands return version numbers
+
+=== "Windows"
+    ```powershell
+    git --version; python --version; uv --version
+    ```
+
+=== "macOS"
+    ```bash
+    git --version && python3 --version && uv --version
+    ```
+
+=== "Linux"
+    ```bash
+    git --version && python3 --version && uv --version
+    ```
+
+**Expected**: All commands return version numbers  
 **Time**: 30 seconds
 
 ## Common Errors
@@ -122,3 +283,51 @@ git --version && python --version && uv --version
 
 ---
 **Next**: [Environment Setup](setup.md) • **Time Investment**: 15 minutes
+
+## Appendix: System Verification Commands
+
+### System Check
+
+=== "Windows"
+    ```powershell
+    # Display Windows version
+    [System.Environment]::OSVersion.Version
+    # Or use:
+    winver
+    ```
+
+=== "macOS"
+    ```bash
+    # Display macOS version
+    sw_vers -productVersion
+    # Or full system info:
+    uname -a
+    ```
+
+=== "Linux"
+    ```bash
+    # Display Linux distribution info
+    cat /etc/os-release
+    # Or kernel info:
+    uname -a
+    ```
+
+### Disk Check
+
+=== "Windows"
+    ```powershell
+    # Check available disk space
+    Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name="Free(GB)";Expression={[math]::Round($_.Free/1GB,2)}}
+    ```
+
+=== "macOS"
+    ```bash
+    # Check available disk space
+    df -h | grep -E "^/dev/"
+    ```
+
+=== "Linux"
+    ```bash
+    # Check available disk space
+    df -h | grep -E "^/dev/"
+    ```

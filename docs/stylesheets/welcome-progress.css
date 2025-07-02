@@ -5,10 +5,16 @@
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 2rem;
-  text-align: center;
   font-family: monospace;
   font-size: 0.9rem;
   border: 1px solid #e0e0e0;
+  position: relative;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* Dark mode support */
@@ -20,6 +26,7 @@
 .progress-tracker span {
   margin: 0 0.3rem;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .progress-tracker .completed {
@@ -37,6 +44,7 @@
   background: #e3f2fd;
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
+  scroll-margin: 0 auto;
 }
 
 [data-md-color-scheme="slate"] .progress-tracker .current {
@@ -59,16 +67,23 @@
   margin-bottom: 0.5rem;
   font-size: 0.8rem;
   color: #666;
+  text-align: center;
 }
 
 [data-md-color-scheme="slate"] .progress-tracker::before {
   color: #999;
 }
 
-/* Ensure consistent line display */
-.progress-tracker {
+/* Progress time styling - keep it below the progress items */
+.progress-tracker .progress-time {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #666;
   white-space: nowrap;
-  overflow-x: auto;
+}
+
+[data-md-color-scheme="slate"] .progress-tracker .progress-time {
+  color: #999;
 }
 
 /* Responsive adjustments */

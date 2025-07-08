@@ -154,6 +154,7 @@ library/
 ```
 
 This structure communicates:
+
 - `Engine` via `library` import: Stable, supported
 - `engine.py` module: Available but less stable
 - `utils.py` functions: Use with caution
@@ -264,6 +265,7 @@ class DataProcessor:
     
     Args:
         config: Configuration with keys:
+
             - 'mode': ProcessMode selection
             - 'threads': Worker count (1-32)
             - 'timeout': Max seconds per operation
@@ -364,18 +366,21 @@ APIs guide users through complexity layers:
 #### 3.4.4 Export Categories
 
 **Primary Exports** (Always include):
+
 - Core functionality users directly interact with
 - Configuration and initialization patterns
 - Context managers for resource handling
 - Type definitions clarifying contracts
 
 **Secondary Exports** (Include when valuable):
+
 - Convenience functions and helpers
 - Alternative constructors
 - Specialized error types
 - Advanced configuration options
 
 **Non-Exports** (Exclude even if public):
+
 - Implementation base classes
 - Internal helpers (even without underscore)
 - Debugging utilities
@@ -433,12 +438,14 @@ from mypackage.types import SharedType  # Never: from .types
 ### 4.3 Validation Requirements
 
 Specifications MUST:
+
 - Pass `mypy --strict` without errors
 - Include all exported names from implementation
 - Provide documentation for every export
 - Demonstrate key usage patterns
 
 Design quality metrics:
+
 - Export surface minimized
 - Each export has single clear purpose
 - Progressive complexity layers maintained
@@ -451,18 +458,21 @@ Design quality metrics:
 Within each section, order by dependency and complexity:
 
 **Type Definitions Section**:
+
 1. Simple type aliases
 2. Enums
 3. Complex type aliases (using other types)
 4. Protocols (simplest to most complex)
 
 **Core API Section**:
+
 1. Primary classes/functions users interact with most
 2. Essential data structures
 3. Main processing functions
 4. Configuration classes
 
 **Supporting API Section**:
+
 1. Factory functions for core types
 2. Utility functions
 3. Helper classes
@@ -471,6 +481,7 @@ Within each section, order by dependency and complexity:
 ### 4.5 Tooling Integration
 
 Libraries SHOULD:
+
 - Include `py.typed` marker for type checking
 - Validate import paths match stub locations
 - Test that public imports work as documented

@@ -1,3 +1,119 @@
-site_name: My Tool
+site_name: Python Project Template
+site_description: A modern Python project template with Architecture Realization Framework
+site_url: https://example.com/py-project-tmpl
+repo_name: py-project-tmpl
+repo_url: https://github.com/pahansen95/py-project-tmpl
+edit_uri: edit/trunk/docs/
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  icon:
+    logo: material/library
+    repo: fontawesome/brands/github
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
 nav:
   - Home: index.md
+  - Architecture Framework:
+    - Overview: ArchitectureRealization/index.md
+    - Phase 1 - Vision & Models: ArchitectureRealization/Phase1-VisionModelsPredicates/index.md
+    - Phase 2 - Architectural Design: ArchitectureRealization/Phase2-ArchitecturalDesign/index.md
+    - Phase 3 - Hierarchical Design:
+      - Overview: ArchitectureRealization/Phase3-HierarchicalDesignTree/index.md
+      - Classification Guide: ArchitectureRealization/Phase3-HierarchicalDesignTree/classification-guide.md
+      - Consolidation Patterns: ArchitectureRealization/Phase3-HierarchicalDesignTree/consolidation-patterns.md
+      - Processing Examples: ArchitectureRealization/Phase3-HierarchicalDesignTree/level-processing-examples.md
+      - Procedure: ArchitectureRealization/Phase3-HierarchicalDesignTree/procedure.md
+    - Phase 4 - Solution Design: ArchitectureRealization/Phase4-SolutionDesign/index.md
+    - Phase 5 - System Specifications: ArchitectureRealization/Phase5-SystemSpecifications/index.md
+    - Phase 6 - Project Structure: ArchitectureRealization/Phase6-ProjectStructuralLayout/index.md
+    - Phase 7 - API Specifications: ArchitectureRealization/Phase7-APISpecifications/index.md
+    - Phase 8 - Implementation: ArchitectureRealization/Phase8-Implementation/index.md
+  - Documentation Registry:
+    - Overview: Registry/index.md
+    - Automated Development: Registry/AutomatedDevelopment.md
+    - Python API Standard: Registry/PyAPISpec.md
+    - Narrative Procedural Language: Registry/NarrativeProceduralLang.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/pahansen95/py-project-tmpl
+  generator: false
+
+copyright: |
+  &copy; 2024 <a href="https://github.com/pahansen95/py-project-tmpl"  target="_blank" rel="noopener">Python Project Template</a>

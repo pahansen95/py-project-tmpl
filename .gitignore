@@ -92,7 +92,7 @@
 # Python & Documentation Related Files
 !.python-version
 !pyproject.toml
-!uv.lock
+# !uv.lock
 !mkdocs.yml
 # NOTE: Version Control & Development Configuration Files
 !.gitignore

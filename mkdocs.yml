@@ -48,6 +48,12 @@ theme:
 plugins:
   - search:
       separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
 
 markdown_extensions:
   - abbr
@@ -88,6 +94,12 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Welcome Guide:
+    - Overview: welcome/index.md
+    - Setup: welcome/setup.md
+    - Workflow: welcome/workflow.md
+    - Reference: welcome/reference.md
+    - Quick Reference Card: welcome/quick-reference-card.md
   - Architecture Framework:
     - Overview: ArchitectureRealization/index.md
     - Phase 1 - Vision & Models: ArchitectureRealization/Phase1-VisionModelsPredicates/index.md
@@ -108,6 +120,12 @@ nav:
     - Automated Development: Registry/AutomatedDevelopment.md
     - Python API Standard: Registry/PyAPISpec.md
     - Narrative Procedural Language: Registry/NarrativeProceduralLang.md
+
+extra_css:
+  - _theme/css/welcome-progress-tree.css
+
+extra_javascript:
+  - _theme/js/platform-tabs.js
 
 extra:
   social:

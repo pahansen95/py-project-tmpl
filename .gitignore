@@ -37,6 +37,11 @@
 !docs/**/*.jpg
 !docs/**/*.svg
 
+# INCLUDE: Theme assets only in _theme subdirectory
+!docs/_theme/**/
+!docs/_theme/**/*.css
+!docs/_theme/**/*.js
+
 # INCLUDE: Helpers Folder & Contained Python Source Files, Scripts & Documents
 !helpers/
 !helpers/**/

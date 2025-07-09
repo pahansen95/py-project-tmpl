@@ -25,8 +25,9 @@ test = [
     "pytest-mock>=3.14.1",
 ]
 docs = [
-    "mkdocs>=1.5.3",
-    "mkdocs-material>=9.5.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.15",
+    "mkdocstrings[python]>=0.29.1",
 ]
 
 [tool.ruff]

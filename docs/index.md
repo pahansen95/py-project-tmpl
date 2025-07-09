@@ -97,5 +97,5 @@ When working with this template:
 
 - Explore the complete [Architecture Realization Framework](./ArchitectureRealization/index.md)
 - Study paradigms in the [Documentation Registry](./Registry/index.md)
-- Review the [Contributor's Guide](../CONTRIBUTOR.md) for development practices
-- Check [Claude Developer Guide](../CLAUDE.md) for AI-assisted development
+- Review the Contributor's Guide for development practices
+- Check Claude Developer Guide for AI-assisted development

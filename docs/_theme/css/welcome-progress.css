@@ -1,0 +1,113 @@
+/* Progress Tracker Styling for Welcome Guide */
+
+.progress-tracker {
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  font-family: monospace;
+  font-size: 0.9rem;
+  border: 1px solid #e0e0e0;
+  position: relative;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Dark mode support */
+[data-md-color-scheme="slate"] .progress-tracker {
+  background: #2d2d2d;
+  border-color: #4a4a4a;
+}
+
+.progress-tracker span {
+  margin: 0 0.3rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.progress-tracker .completed {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+[data-md-color-scheme="slate"] .progress-tracker .completed {
+  color: #66bb6a;
+}
+
+.progress-tracker .current {
+  color: #2196f3;
+  font-weight: bold;
+  background: #e3f2fd;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  scroll-margin: 0 auto;
+}
+
+[data-md-color-scheme="slate"] .progress-tracker .current {
+  color: #64b5f6;
+  background: #1e4976;
+}
+
+.progress-tracker .upcoming {
+  color: #9e9e9e;
+}
+
+[data-md-color-scheme="slate"] .progress-tracker .upcoming {
+  color: #757575;
+}
+
+/* Arrow styling */
+.progress-tracker::before {
+  content: "📍 You are here:";
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: #666;
+  text-align: center;
+}
+
+[data-md-color-scheme="slate"] .progress-tracker::before {
+  color: #999;
+}
+
+/* Progress time styling - keep it below the progress items */
+.progress-tracker .progress-time {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #666;
+  white-space: nowrap;
+}
+
+[data-md-color-scheme="slate"] .progress-tracker .progress-time {
+  color: #999;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .progress-tracker {
+    font-size: 0.75rem;
+    padding: 0.8rem 0.5rem;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  .progress-tracker span {
+    margin: 0 0.1rem;
+  }
+  
+  /* Hide the "You are here" text on mobile */
+  .progress-tracker::before {
+    display: none;
+  }
+}
+
+/* For very small screens */
+@media (max-width: 480px) {
+  .progress-tracker {
+    font-size: 0.7rem;
+  }
+}

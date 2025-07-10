@@ -20,3 +20,12 @@ This document provides basic guidance for Agentic Developers interfacing with th
 - Articulate your mental models about the project's functionaity & features. Think through things deeply.
 - When implementing new functionality; K.I.S.S. Be iterative & aim to deduplicate, minimize or otherwise reduce the amount of code written.
  
+## Tools & Procedures
+
+- When running python & python based tools, you MUST activate the [Python Virtual Environment](./.venv/) first.
+- The Python Project is managed via the `uv` command; consult the [Python Project Config](./pyproject.toml) to understand available packages, project metadata & structural concerns.
+- We use `pre-commit` to manage Git commit hooks. The current set of hooks is configured in the [pre-commit config](./.pre-commit-config.yaml).
+- When tracking files in Git, specifically when adding & removing files/folders, you must update the [Git Ignore](./.gitignore) adhering to the embedded instructions.
+- When adding & removing [Documentation](./docs/) you must also update the [MkDocs Config](./mkdocs.yml).
+- Scripts & Tools intended to aid development should be maintained under the [Helpers Subdirectory](./helpers/).
+- Development related data may be cached under the [Project Cache](./.cache/)
